@@ -1,0 +1,2348 @@
+<title>Kwanza Square</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0A0A0A">
+
+<div id="app">
+
+  <!-- ------------------------------------------------------------- home -->
+  <section class="screen active" id="screen-home">
+    <div class="home-wrap">
+      <svg class="brand-mark" id="home-emblem" aria-label="Kwanza Square board"></svg>
+      <div>
+        <div class="eyebrow">Jeu Africain traditionnel</div>
+        <h1 class="brand-title">KWANZA&nbsp;SQUARE</h1>
+        <div class="brand-sub">The African Strategy Game</div>
+      </div>
+      <p class="brand-note">
+        A mystical African traditional game of wit and strategic thinking.
+        Three squares, twenty-four intersections, ten soldiers a side —
+        and a sacred centre no one may hold.
+      </p>
+      <div class="menu">
+        <button class="btn btn-primary" id="btn-play">Play</button>
+        <button class="btn" id="btn-tutorial">How to play</button>
+        <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- mode select -->
+  <section class="screen" id="screen-mode">
+    <div class="scroll-body">
+      <div class="panel">
+        <h2>Choose your opponent</h2>
+        <p class="hint">Pass one device back and forth, or take on the Kwanza AI.</p>
+        <div class="option-grid" role="radiogroup">
+          <div class="option" role="radio" tabindex="0" data-mode="ai" aria-checked="true">
+            <span class="opt-icon">◆</span>
+            <span>
+              <span class="opt-title">Play the Kwanza AI</span>
+              <span class="opt-desc">You are Gold and open the first round.</span>
+            </span>
+          </div>
+          <div class="option" role="radio" tabindex="0" data-mode="local" aria-checked="false">
+            <span class="opt-icon">◈</span>
+            <span>
+              <span class="opt-title">Two players, one device</span>
+              <span class="opt-desc">Gold and Black take turns on the same board.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="difficulty-block">
+        <h2>AI strength</h2>
+        <p class="hint">Hard looks four moves ahead, blocks your trios and avoids traps.</p>
+        <div class="seg">
+          <button class="btn btn-sm" data-difficulty="easy">Easy</button>
+          <button class="btn btn-sm" data-difficulty="normal">Normal</button>
+          <button class="btn btn-sm" data-difficulty="hard">Hard</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Options</h2>
+        <div class="seg">
+          <button class="btn btn-sm" data-toggle="sound">Sound</button>
+          <button class="btn btn-sm" data-toggle="confirm">Tap to confirm</button>
+        </div>
+        <p class="hint">Turn on “tap to confirm” if you find yourself mis-tapping on a small screen.</p>
+      </div>
+
+      <div class="menu">
+        <button class="btn btn-gold" id="btn-start">Start match</button>
+        <button class="btn btn-ghost" id="btn-mode-back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- tutorial -->
+  <section class="screen" id="screen-tutorial">
+    <div class="scroll-body">
+      <div class="panel tutorial-card">
+        <div class="tutorial-figure"><svg id="tutorial-board"></svg></div>
+        <h2 class="tutorial-step-title" id="tutorial-title"></h2>
+        <p class="tutorial-text" id="tutorial-text"></p>
+        <div class="dots" id="tutorial-dots"></div>
+        <div class="tutorial-nav">
+          <button class="btn btn-sm" id="tutorial-prev">Back</button>
+          <button class="btn btn-sm btn-gold" id="tutorial-next">Next</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="tutorial-exit">Close</button>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------------- game -->
+  <section class="screen" id="screen-game">
+    <header class="topbar">
+      <div class="score-side" id="side-a">
+        <span class="chip-pawn gold"></span>
+        <span class="score-meta">
+          <span class="score-name" id="name-a">Gold</span>
+          <span class="score-pawns" id="pawns-a"></span>
+        </span>
+      </div>
+      <div class="score-center">
+        <div class="score-round" id="score-round"></div>
+        <div class="score-value" id="score-value">0 – 0</div>
+      </div>
+      <div class="score-side right" id="side-b">
+        <span class="chip-pawn black"></span>
+        <span class="score-meta">
+          <span class="score-name" id="name-b">Black</span>
+          <span class="score-pawns" id="pawns-b"></span>
+        </span>
+      </div>
+    </header>
+
+    <div class="board-stage">
+      <div class="board-frame"><svg id="board"></svg></div>
+    </div>
+
+    <footer class="actionbar">
+      <div class="prompt" id="prompt">
+        <span class="mode-tag" id="prompt-tag">Place</span>
+        <span id="prompt-text"></span>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-sm" id="btn-undo">Undo</button>
+        <button class="btn btn-sm btn-gold" id="btn-confirm" hidden>Confirm</button>
+        <button class="btn btn-sm" id="btn-rules">Rules</button>
+        <button class="btn btn-sm btn-ghost" id="btn-quit">Menu</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- -------------------------------------------------------- scoreboard -->
+  <section class="screen" id="screen-scoreboard">
+    <div class="scroll-body">
+      <div class="panel" style="text-align:center">
+        <svg class="result-emblem" id="final-emblem"></svg>
+        <div class="eyebrow">Match complete</div>
+        <h2 id="final-line"></h2>
+        <div class="score-value" id="final-score" style="font-size:34px;margin-top:6px"></div>
+        <div class="round-pills" id="round-pills"></div>
+      </div>
+      <div class="panel">
+        <h2>How the rounds fell</h2>
+        <ul class="modal-body" id="final-reasons" style="padding-left:18px"></ul>
+      </div>
+      <div class="menu">
+        <button class="btn btn-gold" id="btn-rematch">Rematch</button>
+        <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+/* Kwanza Square — interface styling.
+ *
+ * Two palettes, deliberately kept apart (per Martin):
+ *   BOARD — the original painted colours: royal blue, orange, black, white.
+ *   UI    — the modern shell: emerald, gold, ivory, charcoal.
+ */
+
+:root {
+  /* modern UI palette */
+  --emerald: #0F6F4F;
+  --emerald-lift: #14855f;
+  --gold: #D4A017;
+  --gold-lift: #f0bb35;
+  --ivory: #F7F3E9;
+  --charcoal: #1A1A1A;
+  --shadow: #0A0A0A;
+  --crimson: #B02020;
+
+  /* original board palette */
+  --board-blue: #1B4BA8;
+  --board-blue-deep: #10306B;
+  --board-orange: #E4711E;
+  --board-orange-lift: #F79438;
+  --board-black: #101010;
+  --board-white: #FFFFFF;
+
+  --ui-font: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --body-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --accent-font: 'Ubuntu', 'Inter', sans-serif;
+
+  --radius: 14px;
+  --tap: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--shadow);
+  color: var(--ivory);
+  font-family: var(--body-font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* stop double-tap zoom and rubber-banding on phones */
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(120% 80% at 50% 0%, #123a2c 0%, transparent 60%),
+    radial-gradient(100% 70% at 50% 100%, #1a1410 0%, transparent 55%),
+    var(--shadow);
+}
+
+#app {
+  min-height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.screen { display: none; flex: 1; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ---------------------------------------------------------------- typography */
+
+h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-spacing: 0.01em; }
+.eyebrow {
+  font-family: var(--accent-font);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  color: var(--gold);
+  opacity: 0.9;
+}
+
+/* --------------------------------------------------------------------- home */
+
+.home-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.brand-mark { width: min(58vw, 210px); height: auto; filter: drop-shadow(0 12px 30px rgba(0,0,0,.55)); }
+
+.brand-title {
+  font-size: clamp(30px, 9vw, 52px);
+  line-height: 1;
+  background: linear-gradient(180deg, var(--ivory) 0%, var(--gold) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub {
+  font-family: var(--accent-font);
+  font-size: clamp(12px, 3.4vw, 15px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(247,243,233,.66);
+  margin-top: 8px;
+}
+.brand-note {
+  max-width: 30rem;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(247,243,233,.62);
+}
+
+.menu { display: flex; flex-direction: column; gap: 12px; width: min(100%, 340px); }
+
+/* ------------------------------------------------------------------ buttons */
+
+.btn {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  font-size: 15px;
+  min-height: var(--tap);
+  padding: 13px 20px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(247,243,233,.14);
+  background: rgba(247,243,233,.06);
+  color: var(--ivory);
+  cursor: pointer;
+  transition: transform .12s ease, background .18s ease, border-color .18s ease, opacity .18s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  text-align: center;
+}
+.btn:active { transform: scale(.975); }
+.btn[hidden] { display: none; } /* .btn sets display, so [hidden] needs to win */
+.btn:disabled { opacity: .38; cursor: default; }
+.btn:disabled:active { transform: none; }
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--emerald-lift), var(--emerald));
+  border-color: rgba(212,160,23,.5);
+  box-shadow: 0 10px 26px rgba(15,111,79,.34);
+}
+.btn-gold {
+  background: linear-gradient(180deg, var(--gold-lift), var(--gold));
+  color: #2a1e05;
+  border-color: rgba(255,255,255,.28);
+  box-shadow: 0 10px 26px rgba(212,160,23,.28);
+}
+.btn-ghost { background: transparent; }
+.btn-sm { min-height: 38px; padding: 8px 14px; font-size: 13px; border-radius: 11px; }
+.btn-danger { border-color: rgba(176,32,32,.5); color: #ffb4b4; }
+
+/* --------------------------------------------------------------- mode select */
+
+.panel {
+  width: min(100%, 460px);
+  background: rgba(10,10,10,.55);
+  border: 1px solid rgba(247,243,233,.1);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+.panel + .panel { margin-top: 14px; }
+.panel h2 { font-size: 17px; margin-bottom: 4px; }
+.panel p.hint { font-size: 13px; color: rgba(247,243,233,.55); margin: 6px 0 14px; line-height: 1.5; }
+
+.option-grid { display: grid; gap: 10px; }
+.option {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; min-height: var(--tap);
+  border-radius: var(--radius);
+  border: 1px solid rgba(247,243,233,.14);
+  background: rgba(247,243,233,.04);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+.option[aria-checked="true"] {
+  border-color: var(--gold);
+  background: rgba(212,160,23,.12);
+}
+.option .opt-title { font-family: var(--ui-font); font-weight: 700; font-size: 14px; }
+.option .opt-desc { font-size: 12px; color: rgba(247,243,233,.55); margin-top: 2px; }
+.option .opt-icon { font-size: 20px; width: 26px; text-align: center; }
+
+.seg { display: flex; gap: 8px; }
+.seg .btn { flex: 1; }
+.seg .btn[aria-pressed="true"] {
+  background: rgba(212,160,23,.16);
+  border-color: var(--gold);
+  color: var(--gold-lift);
+}
+
+.scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  gap: 14px;
+}
+
+/* --------------------------------------------------------------- game screen */
+
+#screen-game { display: none; }
+#screen-game.active { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(247,243,233,.08);
+  background: rgba(10,10,10,.5);
+  flex: 0 0 auto;
+}
+
+.score-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.score-side.right { flex-direction: row-reverse; }
+
+.chip-pawn {
+  width: 26px; height: 26px; border-radius: 50%;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255,255,255,.75);
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.chip-pawn.gold { background: radial-gradient(circle at 35% 30%, #ffd977, var(--gold) 62%, #8a6408); }
+.chip-pawn.black { background: radial-gradient(circle at 35% 30%, #5c5c5c, #141414 60%, #000); }
+
+.score-meta { min-width: 0; }
+.score-name {
+  font-family: var(--ui-font); font-weight: 700; font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.score-pawns { font-size: 11px; color: rgba(247,243,233,.55); }
+
+.score-center { text-align: center; flex: 0 0 auto; }
+.score-round { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(247,243,233,.5); }
+.score-value { font-family: var(--ui-font); font-weight: 800; font-size: 20px; letter-spacing: .06em; }
+
+.score-side.active-turn .score-name { color: var(--gold-lift); }
+.score-side.active-turn .chip-pawn {
+  box-shadow: 0 0 0 3px rgba(212,160,23,.4), 0 2px 10px rgba(0,0,0,.5);
+}
+
+.board-stage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  min-height: 0; /* lets the board shrink inside a flex column on short screens */
+}
+
+.board-frame {
+  width: min(100%, 92vh, 620px);
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,.6), 0 0 0 1px rgba(247,243,233,.1);
+}
+#board { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+
+.actionbar {
+  flex: 0 0 auto;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(247,243,233,.08);
+  background: rgba(10,10,10,.62);
+  display: flex; flex-direction: column; gap: 9px;
+}
+
+.prompt {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  font-family: var(--ui-font); font-weight: 700; font-size: 13.5px;
+  min-height: 22px; text-align: center;
+}
+.prompt .mode-tag {
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(212,160,23,.16); color: var(--gold-lift);
+  border: 1px solid rgba(212,160,23,.34);
+}
+.prompt.capture .mode-tag { background: rgba(176,32,32,.18); color: #ff9d9d; border-color: rgba(176,32,32,.5); }
+.prompt.thinking { color: rgba(247,243,233,.6); }
+
+.action-row { display: flex; gap: 8px; }
+.action-row .btn { flex: 1; }
+
+/* -------------------------------------------------------------------- modal */
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5,5,5,.78);
+  backdrop-filter: blur(5px);
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+  z-index: 40;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  width: min(100%, 440px);
+  max-height: 86dvh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #14140f, #0b0b0b);
+  border: 1px solid rgba(212,160,23,.3);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.75);
+  animation: modal-in .22s ease;
+}
+@keyframes modal-in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+.modal h2 { font-size: 20px; margin-bottom: 8px; }
+.modal .modal-body { font-size: 14px; line-height: 1.62; color: rgba(247,243,233,.78); }
+.modal .modal-body h3 { font-size: 13px; margin: 16px 0 6px; color: var(--gold); text-transform: uppercase; letter-spacing: .12em; }
+.modal .modal-body ul { margin: 6px 0; padding-left: 18px; }
+.modal .modal-body li { margin: 4px 0; }
+.modal-actions { display: flex; gap: 9px; margin-top: 18px; }
+.modal-actions .btn { flex: 1; }
+
+.result-emblem { display: block; margin: 0 auto 10px; width: 84px; height: 84px; }
+
+.round-pills { display: flex; gap: 8px; justify-content: center; margin: 14px 0 4px; flex-wrap: wrap; }
+.pill {
+  font-size: 11px; font-family: var(--ui-font); font-weight: 700;
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid rgba(247,243,233,.16);
+  color: rgba(247,243,233,.6);
+}
+.pill.win-a { border-color: rgba(212,160,23,.55); color: var(--gold-lift); background: rgba(212,160,23,.1); }
+.pill.win-b { border-color: rgba(247,243,233,.5); color: var(--ivory); background: rgba(247,243,233,.08); }
+.pill.draw { border-style: dashed; }
+
+/* ----------------------------------------------------------------- tutorial */
+
+.tutorial-card { width: min(100%, 480px); }
+.tutorial-figure {
+  width: 100%; aspect-ratio: 1 / 1; max-height: 46dvh;
+  margin: 0 auto 14px; border-radius: 16px; overflow: hidden;
+  background: var(--board-blue-deep);
+  box-shadow: inset 0 0 0 1px rgba(247,243,233,.12);
+}
+.tutorial-figure svg { display: block; width: 100%; height: 100%; }
+.tutorial-step-title { font-size: 18px; margin-bottom: 6px; }
+.tutorial-text { font-size: 14px; line-height: 1.62; color: rgba(247,243,233,.74); min-height: 5.2em; }
+.tutorial-nav { display: flex; gap: 9px; align-items: center; margin-top: 16px; }
+.tutorial-nav .btn { flex: 1; }
+.dots { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(247,243,233,.22); }
+.dot.on { background: var(--gold); transform: scale(1.25); }
+
+/* --------------------------------------------------------------- board bits */
+
+.node-hit { cursor: pointer; fill: transparent; }
+.node-seat { transition: fill .2s ease, opacity .2s ease; }
+
+.node.legal .node-halo { opacity: 1; animation: legal-pulse 1.5s ease-in-out infinite; }
+.node-halo { opacity: 0; pointer-events: none; }
+@keyframes legal-pulse {
+  0%, 100% { transform: scale(1);    opacity: .55; }
+  50%      { transform: scale(1.14); opacity: 1;   }
+}
+
+.pawn { transition: opacity .2s ease; }
+.pawn-body { transform-origin: center; transform-box: fill-box; }
+.node.selected .pawn-body { animation: selected-bob 1.1s ease-in-out infinite; }
+@keyframes selected-bob {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.11); }
+}
+.node.selected .select-ring { opacity: 1; animation: legal-pulse 1.3s ease-in-out infinite; }
+.select-ring { opacity: 0; pointer-events: none; }
+
+/* an intersection the no-trio placement rule closes off */
+.forbid-mark { opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.node.forbidden .forbid-mark { opacity: .92; }
+
+.node.capturable .capture-ring { opacity: 1; animation: capture-throb .85s ease-in-out infinite; }
+.capture-ring { opacity: 0; pointer-events: none; }
+@keyframes capture-throb {
+  0%, 100% { transform: scale(1);    opacity: .6; }
+  50%      { transform: scale(1.18); opacity: 1;  }
+}
+
+.node.last-move .move-trace { opacity: .85; }
+.move-trace { opacity: 0; transition: opacity .35s ease; pointer-events: none; }
+
+/* each soldier standing in a scored trio wears a glowing ring */
+.trio-ring { opacity: 0; pointer-events: none; stroke: #FFD36B; }
+.node.in-trio-a .trio-ring,
+.node.in-trio-b .trio-ring { opacity: 1; animation: trio-ring-breathe 2s ease-in-out infinite; }
+.node.in-trio-b .trio-ring { stroke: #FFFFFF; }
+@keyframes trio-ring-breathe {
+  0%, 100% { stroke-opacity: .5; }
+  50%      { stroke-opacity: 1;  }
+}
+
+/* a scored trio glows along its straight line */
+.trio-glow {
+  opacity: 0;
+  animation: trio-in .4s ease forwards, trio-breathe 2s ease-in-out .4s infinite;
+  pointer-events: none;
+}
+@keyframes trio-in { to { opacity: 1; } }
+@keyframes trio-breathe {
+  0%, 100% { stroke-opacity: .45; stroke-width: 12; }
+  50%      { stroke-opacity: .95; stroke-width: 18; }
+}
+
+/* the sacred centre breathes but is never playable */
+.center-aura { animation: aura 4.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes aura {
+  0%, 100% { transform: scale(1);    opacity: .30; }
+  50%      { transform: scale(1.13); opacity: .62; }
+}
+.center-spin { animation: center-spin 64s linear infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes center-spin { to { transform: rotate(360deg); } }
+
+.capture-burst { pointer-events: none; animation: burst .58s ease-out forwards; transform-origin: center; transform-box: fill-box; }
+@keyframes burst {
+  0%   { transform: scale(.35); opacity: .95; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.place-pop { animation: place-pop .3s cubic-bezier(.2,1.5,.5,1); transform-origin: center; transform-box: fill-box; }
+@keyframes place-pop { from { transform: scale(.2); opacity: .2; } }
+
+.board-legend { font-family: var(--accent-font); fill: rgba(255,255,255,.82); letter-spacing: .12em; }
+.board-motto { font-family: var(--accent-font); fill: rgba(255,255,255,.62); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
+}
+
+/* ------------------------------------------------------------- phone tuning */
+
+@media (max-width: 480px) {
+  .board-stage { padding: 6px; }
+  .board-frame { border-radius: 14px; }
+  .topbar { padding: 8px 10px; }
+  .score-value { font-size: 18px; }
+  .brand-note { font-size: 13px; }
+  .board-motto { display: none; } /* side texts would be unreadable at phone size */
+}
+
+/* short landscape phones: put the board beside the rail rather than under it */
+@media (orientation: landscape) and (max-height: 520px) {
+  #screen-game.active { flex-direction: row; }
+  .topbar {
+    flex-direction: column; align-items: stretch; justify-content: center;
+    border-bottom: none; border-right: 1px solid rgba(247,243,233,.08);
+    width: 152px; flex: 0 0 152px; gap: 12px;
+  }
+  .score-side.right { flex-direction: row; }
+  .actionbar { width: 168px; flex: 0 0 168px; border-top: none; border-left: 1px solid rgba(247,243,233,.08); justify-content: center; }
+  .action-row { flex-direction: column; }
+  .board-frame { width: auto; height: 100%; }
+}
+
+</style>
+
+<script>
+/* ===== js/geometry.js ===== */
+/* Kwanzaa Square — board geometry.
+ *
+ * Three concentric squares, 8 playable intersections each = 24 nodes.
+ * The centre is sacred and never playable.
+ *
+ * Ring   0 = outer (Territory), 1 = middle (Strategy), 2 = inner (Mastery)
+ * Pos    0=NW 1=N 2=NE 3=E 4=SE 5=S 6=SW 7=W   (clockwise from north-west)
+ * Node id = ring * 8 + pos
+ */
+(function (KZ) {
+  'use strict';
+
+  var CENTER = 500;                 // viewBox is 0 0 1000 1000
+  var HALF = [420, 280, 140];       // half-width of each ring
+  var MIDPOINTS = [1, 3, 5, 7];     // N, E, S, W — the only nodes carrying spokes
+
+  var nodes = [];
+  for (var ring = 0; ring < 3; ring++) {
+    var h = HALF[ring];
+    var coords = [
+      [CENTER - h, CENTER - h], // NW
+      [CENTER,     CENTER - h], // N
+      [CENTER + h, CENTER - h], // NE
+      [CENTER + h, CENTER    ], // E
+      [CENTER + h, CENTER + h], // SE
+      [CENTER,     CENTER + h], // S
+      [CENTER - h, CENTER + h], // SW
+      [CENTER - h, CENTER    ]  // W
+    ];
+    for (var pos = 0; pos < 8; pos++) {
+      nodes.push({
+        id: ring * 8 + pos,
+        ring: ring,
+        pos: pos,
+        x: coords[pos][0],
+        y: coords[pos][1],
+        corner: pos % 2 === 0
+      });
+    }
+  }
+
+  // --- adjacency ------------------------------------------------------------
+  // Within a ring the eight nodes form a closed loop (corner-midpoint-corner).
+  // Radial connectors ("spokes") join the rings at the four edge midpoints,
+  // which is what lets a pawn travel between Territory, Strategy and Mastery.
+  var adjacency = nodes.map(function () { return []; });
+
+  function link(a, b) {
+    if (adjacency[a].indexOf(b) === -1) adjacency[a].push(b);
+    if (adjacency[b].indexOf(a) === -1) adjacency[b].push(a);
+  }
+
+  for (var r = 0; r < 3; r++) {
+    for (var p = 0; p < 8; p++) link(r * 8 + p, r * 8 + ((p + 1) % 8));
+  }
+  MIDPOINTS.forEach(function (p) {
+    link(0 * 8 + p, 1 * 8 + p);
+    link(1 * 8 + p, 2 * 8 + p);
+  });
+
+  // --- trios (mills) --------------------------------------------------------
+  // Only straight vertical or horizontal lines of three count. Diagonals never do.
+  //   * 4 edges per ring x 3 rings = 12
+  //   * 4 radial lines (one per midpoint direction) = 4
+  var trios = [];
+  for (var r2 = 0; r2 < 3; r2++) {
+    var b = r2 * 8;
+    trios.push([b + 0, b + 1, b + 2]); // top edge     — horizontal
+    trios.push([b + 2, b + 3, b + 4]); // right edge   — vertical
+    trios.push([b + 4, b + 5, b + 6]); // bottom edge  — horizontal
+    trios.push([b + 6, b + 7, b + 0]); // left edge    — vertical
+  }
+  MIDPOINTS.forEach(function (p) {
+    trios.push([p, 8 + p, 16 + p]);    // radial — vertical (N/S) or horizontal (E/W)
+  });
+
+  // trios that touch each node, precomputed for fast detection
+  var triosByNode = nodes.map(function () { return []; });
+  trios.forEach(function (t, i) {
+    t.forEach(function (n) { triosByNode[n].push(i); });
+  });
+
+  // straight segments used to draw the board lines
+  var segments = [];
+  for (var r3 = 0; r3 < 3; r3++) {
+    var bb = r3 * 8;
+    segments.push([bb + 0, bb + 2], [bb + 2, bb + 4], [bb + 4, bb + 6], [bb + 6, bb + 0]);
+  }
+  MIDPOINTS.forEach(function (p) {
+    segments.push([p, 16 + p]); // one straight run crossing all three rings
+  });
+
+  KZ.Geometry = {
+    CENTER: CENTER,
+    HALF: HALF,
+    NODE_COUNT: 24,
+    nodes: nodes,
+    adjacency: adjacency,
+    trios: trios,
+    triosByNode: triosByNode,
+    segments: segments,
+    node: function (id) { return nodes[id]; },
+    /** Is `orientation` of a trio vertical or horizontal (never diagonal). */
+    trioOrientation: function (trio) {
+      return nodes[trio[0]].x === nodes[trio[1]].x ? 'vertical' : 'horizontal';
+    }
+  };
+})(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
+
+
+/* ===== js/engine.js ===== */
+/* Kwanza Square — game engine.
+ *
+ * Pure state machine. No DOM, no rendering, no timers. Everything the UI and the
+ * AI need to know about legality lives here so both agree on the rules.
+ *
+ * Rules (authoritative, per Martin):
+ *   - 10 pawns per side, 24 intersections, sacred centre never playable.
+ *   - Phase 1 placement: one pawn per intersection, a placement that would
+ *     complete a trio is ILLEGAL — the player must choose another intersection.
+ *     Nothing scores in Phase 1.
+ *   - Phase 2 movement: vertical/horizontal to an ADJACENT FREE intersection.
+ *     No diagonals, no skipping, no immediate back-and-forth. A player's first
+ *     move of Phase 2 cannot score.
+ *   - A trio (3 in a straight line, never diagonal) grants the right to remove
+ *     ANY one enemy pawn, including one standing inside a trio.
+ *   - Round ends when a side has no pawns left, or cannot move. Best of three.
+ */
+(function (KZ) {
+  'use strict';
+
+  var G = KZ.Geometry;
+  var PAWNS_PER_SIDE = 10;
+  var ROUNDS_TO_WIN = 2;
+  var DRAW_LIMIT = 100; // moves without a capture -> round declared a draw
+
+  function other(player) { return player === 'A' ? 'B' : 'A'; }
+
+  function createMatch(opts) {
+    opts = opts || {};
+    var state = {
+      mode: opts.mode || 'local',          // 'local' | 'ai'
+      aiSide: opts.aiSide || 'B',
+      difficulty: opts.difficulty || 'normal',
+      names: opts.names || { A: 'Gold', B: 'Black' },
+      round: 1,
+      scores: { A: 0, B: 0 },
+      roundHistory: [],
+      matchOver: false,
+      matchWinner: null,
+      startingPlayer: 'A'
+    };
+    resetRound(state);
+    return state;
+  }
+
+  function resetRound(state) {
+    state.phase = 'placement';
+    state.board = new Array(G.NODE_COUNT).fill(null);
+    state.turn = state.startingPlayer;
+    state.toPlace = { A: PAWNS_PER_SIDE, B: PAWNS_PER_SIDE };
+    state.onBoard = { A: 0, B: 0 };
+    state.awaitingCapture = null;
+    state.lastMove = { A: null, B: null };
+    state.movesMade = { A: 0, B: 0 };
+    state.movesSinceCapture = 0;
+    state.activeTrios = [];
+    state.roundOver = false;
+    state.roundWinner = null;
+    state.roundReason = '';
+    state.log = [];
+  }
+
+  function clone(state) {
+    return {
+      mode: state.mode, aiSide: state.aiSide, difficulty: state.difficulty,
+      names: state.names, round: state.round,
+      scores: { A: state.scores.A, B: state.scores.B },
+      roundHistory: state.roundHistory.slice(),
+      matchOver: state.matchOver, matchWinner: state.matchWinner,
+      startingPlayer: state.startingPlayer,
+      phase: state.phase,
+      board: state.board.slice(),
+      turn: state.turn,
+      toPlace: { A: state.toPlace.A, B: state.toPlace.B },
+      onBoard: { A: state.onBoard.A, B: state.onBoard.B },
+      awaitingCapture: state.awaitingCapture,
+      lastMove: {
+        A: state.lastMove.A ? { from: state.lastMove.A.from, to: state.lastMove.A.to } : null,
+        B: state.lastMove.B ? { from: state.lastMove.B.from, to: state.lastMove.B.to } : null
+      },
+      movesMade: { A: state.movesMade.A, B: state.movesMade.B },
+      movesSinceCapture: state.movesSinceCapture,
+      activeTrios: state.activeTrios.slice(),
+      roundOver: state.roundOver, roundWinner: state.roundWinner,
+      roundReason: state.roundReason,
+      log: state.log.slice()
+    };
+  }
+
+  // --- trio detection -------------------------------------------------------
+
+  /** Indices of trios that are completely owned by `player` and contain `node`. */
+  function triosAt(board, node, player) {
+    var found = [];
+    var candidates = G.triosByNode[node];
+    for (var i = 0; i < candidates.length; i++) {
+      var t = G.trios[candidates[i]];
+      if (board[t[0]] === player && board[t[1]] === player && board[t[2]] === player) {
+        found.push(candidates[i]);
+      }
+    }
+    return found;
+  }
+
+  /** Every trio currently held by `player` — used for the board glow. */
+  function allTrios(board, player) {
+    var found = [];
+    for (var i = 0; i < G.trios.length; i++) {
+      var t = G.trios[i];
+      if (board[t[0]] === player && board[t[1]] === player && board[t[2]] === player) found.push(i);
+    }
+    return found;
+  }
+
+  /** Would dropping a pawn on `node` complete a trio? Placement forbids this. */
+  function placementFormsTrio(board, node, player) {
+    board[node] = player;
+    var hit = triosAt(board, node, player).length > 0;
+    board[node] = null;
+    return hit;
+  }
+
+  // --- legality -------------------------------------------------------------
+
+  function legalPlacements(state) {
+    var player = state.turn;
+    var free = [];
+    var i;
+    for (i = 0; i < G.NODE_COUNT; i++) if (state.board[i] === null) free.push(i);
+
+    var legal = free.filter(function (n) {
+      return !placementFormsTrio(state.board, n, player);
+    });
+
+    // Defensive only: if every remaining intersection would force a trio there is
+    // no legal choice left, so the trio is allowed but still scores nothing.
+    return legal.length ? legal : free;
+  }
+
+  function isBacktrack(state, player, from, to) {
+    var last = state.lastMove[player];
+    return !!last && last.from === to && last.to === from;
+  }
+
+  function legalMovesFrom(state, from) {
+    var player = state.turn;
+    if (state.board[from] !== player) return [];
+    var out = [];
+    var adj = G.adjacency[from];
+    for (var i = 0; i < adj.length; i++) {
+      var to = adj[i];
+      if (state.board[to] !== null) continue;          // no moving into an occupied space
+      if (isBacktrack(state, player, from, to)) continue; // no back-and-forth
+      out.push(to);
+    }
+    return out;
+  }
+
+  function allMoves(state, player) {
+    var moves = [];
+    for (var from = 0; from < G.NODE_COUNT; from++) {
+      if (state.board[from] !== player) continue;
+      var adj = G.adjacency[from];
+      for (var i = 0; i < adj.length; i++) {
+        var to = adj[i];
+        if (state.board[to] !== null) continue;
+        if (isBacktrack(state, player, from, to)) continue;
+        moves.push({ from: from, to: to });
+      }
+    }
+    return moves;
+  }
+
+  /** Any enemy pawn may be taken — including one standing inside a trio. */
+  function capturableNodes(state, player) {
+    var foe = other(player);
+    var out = [];
+    for (var i = 0; i < G.NODE_COUNT; i++) if (state.board[i] === foe) out.push(i);
+    return out;
+  }
+
+  /** Every action the side to move may legally take right now. */
+  function legalActions(state) {
+    if (state.roundOver || state.matchOver) return [];
+    if (state.awaitingCapture) {
+      return capturableNodes(state, state.awaitingCapture).map(function (n) {
+        return { type: 'capture', node: n };
+      });
+    }
+    if (state.phase === 'placement') {
+      return legalPlacements(state).map(function (n) { return { type: 'place', node: n }; });
+    }
+    return allMoves(state, state.turn).map(function (m) {
+      return { type: 'move', from: m.from, to: m.to };
+    });
+  }
+
+  // --- applying actions -----------------------------------------------------
+
+  function log(state, text) {
+    state.log.push({ round: state.round, text: text });
+    if (state.log.length > 200) state.log.shift();
+  }
+
+  function label(state, player) {
+    return state.names[player] || player;
+  }
+
+  /**
+   * Apply an action. Mutates `state`. Returns a list of UI events describing
+   * what visibly happened, e.g. [{type:'trio', trios:[...]}, {type:'capture'}].
+   */
+  function apply(state, action) {
+    var events = [];
+    if (state.roundOver || state.matchOver) return events;
+    var player = state.awaitingCapture || state.turn;
+
+    if (action.type === 'place') {
+      if (state.phase !== 'placement' || state.awaitingCapture) return events;
+      if (state.board[action.node] !== null) return events;
+      state.board[action.node] = player;
+      state.toPlace[player]--;
+      state.onBoard[player]++;
+      log(state, label(state, player) + ' places a soldier.');
+      events.push({ type: 'place', node: action.node, player: player });
+
+      if (state.toPlace.A === 0 && state.toPlace.B === 0) {
+        state.phase = 'movement';
+        log(state, 'All 20 soldiers placed — the movement phase begins.');
+        events.push({ type: 'phase', phase: 'movement' });
+      }
+      endTurn(state, events);
+      return events;
+    }
+
+    if (action.type === 'move') {
+      if (state.phase !== 'movement' || state.awaitingCapture) return events;
+      if (state.board[action.from] !== player) return events;
+      if (legalMovesFrom(state, action.from).indexOf(action.to) === -1) return events;
+
+      state.board[action.from] = null;
+      state.board[action.to] = player;
+      state.lastMove[player] = { from: action.from, to: action.to };
+      state.movesSinceCapture++;
+      events.push({ type: 'move', from: action.from, to: action.to, player: player });
+
+      var isFirstMove = state.movesMade[player] === 0;
+      state.movesMade[player]++;
+
+      var formed = triosAt(state.board, action.to, player);
+      if (formed.length && isFirstMove) {
+        log(state, label(state, player) + ' lines up a trio, but a first move cannot score.');
+        events.push({ type: 'trio-void', trios: formed });
+      } else if (formed.length) {
+        state.awaitingCapture = player;
+        log(state, label(state, player) + ' scores a trio — remove an enemy soldier.');
+        events.push({ type: 'trio', trios: formed, player: player });
+        refreshTrios(state);
+        return events; // same player continues, to take a pawn
+      }
+      refreshTrios(state);
+      endTurn(state, events);
+      return events;
+    }
+
+    if (action.type === 'capture') {
+      if (!state.awaitingCapture) return events;
+      var taker = state.awaitingCapture;
+      if (state.board[action.node] !== other(taker)) return events;
+      state.board[action.node] = null;
+      state.onBoard[other(taker)]--;
+      state.awaitingCapture = null;
+      state.movesSinceCapture = 0;
+      log(state, label(state, taker) + ' captures a soldier of ' + label(state, other(taker)) + '.');
+      events.push({ type: 'capture', node: action.node, player: taker, victim: other(taker) });
+      refreshTrios(state);
+      endTurn(state, events);
+      return events;
+    }
+
+    return events;
+  }
+
+  function refreshTrios(state) {
+    state.activeTrios = allTrios(state.board, 'A')
+      .map(function (i) { return { trio: i, player: 'A' }; })
+      .concat(allTrios(state.board, 'B').map(function (i) { return { trio: i, player: 'B' }; }));
+  }
+
+  function endTurn(state, events) {
+    state.turn = other(state.turn);
+    checkRoundEnd(state, events);
+  }
+
+  function checkRoundEnd(state, events) {
+    if (state.roundOver) return;
+    var mover = state.turn;
+    var foe = other(mover);
+
+    // A side with no soldiers left loses the round.
+    if (state.phase === 'movement' && state.onBoard[mover] === 0) {
+      return finishRound(state, foe, label(state, mover) + ' has no soldiers left.', events);
+    }
+    if (state.phase === 'movement' && state.onBoard[foe] === 0) {
+      return finishRound(state, mover, label(state, foe) + ' has no soldiers left.', events);
+    }
+    // A side that cannot move loses the round.
+    if (state.phase === 'movement' && allMoves(state, mover).length === 0) {
+      return finishRound(state, foe, label(state, mover) + ' cannot move.', events);
+    }
+    if (state.phase === 'movement' && state.movesSinceCapture >= DRAW_LIMIT) {
+      return finishRound(state, null, 'No capture in ' + DRAW_LIMIT + ' moves — the round is drawn.', events);
+    }
+  }
+
+  function finishRound(state, winner, reason, events) {
+    state.roundOver = true;
+    state.roundWinner = winner;
+    state.roundReason = reason;
+    if (winner) state.scores[winner]++;
+    state.roundHistory.push({ round: state.round, winner: winner, reason: reason });
+    log(state, 'Round ' + state.round + ': ' + (winner ? label(state, winner) + ' wins. ' : 'Drawn. ') + reason);
+    events.push({ type: 'round-over', winner: winner, reason: reason });
+
+    if (winner && state.scores[winner] >= ROUNDS_TO_WIN) {
+      state.matchOver = true;
+      state.matchWinner = winner;
+      log(state, label(state, winner) + ' takes the match ' + state.scores[winner] + '–' + state.scores[other(winner)] + '.');
+      events.push({ type: 'match-over', winner: winner });
+    }
+  }
+
+  /** Begin the next round. The loser of the toss alternates who opens. */
+  function nextRound(state) {
+    if (state.matchOver) return state;
+    state.round++;
+    state.startingPlayer = other(state.startingPlayer);
+    resetRound(state);
+    return state;
+  }
+
+  KZ.Engine = {
+    PAWNS_PER_SIDE: PAWNS_PER_SIDE,
+    ROUNDS_TO_WIN: ROUNDS_TO_WIN,
+    DRAW_LIMIT: DRAW_LIMIT,
+    other: other,
+    createMatch: createMatch,
+    resetRound: resetRound,
+    nextRound: nextRound,
+    clone: clone,
+    triosAt: triosAt,
+    allTrios: allTrios,
+    placementFormsTrio: placementFormsTrio,
+    legalPlacements: legalPlacements,
+    legalMovesFrom: legalMovesFrom,
+    allMoves: allMoves,
+    capturableNodes: capturableNodes,
+    legalActions: legalActions,
+    apply: apply,
+    refreshTrios: refreshTrios
+  };
+})(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
+
+
+/* ===== js/ai.js ===== */
+/* Kwanza Square — the Kwanza AI.
+ *
+ * Heuristics asked for: block opponent trios, build towards your own, avoid
+ * traps (don't wander into positions with no room to move).
+ *
+ * Easy   — greedy with noise, misses some blocks on purpose
+ * Normal — 2-ply alpha-beta
+ * Hard   — 4-ply alpha-beta in movement, 3-ply in placement
+ */
+(function (KZ) {
+  'use strict';
+
+  var G = KZ.Geometry;
+  var E = KZ.Engine;
+
+  var DEPTH = {
+    easy:   { place: 1, move: 1, noise: 26 },
+    normal: { place: 2, move: 2, noise: 6 },
+    hard:   { place: 3, move: 4, noise: 0 }
+  };
+
+  // Midpoints carry the radial connectors, so they are worth more than corners.
+  var DEGREE = G.adjacency.map(function (a) { return a.length; });
+
+  /** How many of this trio's three points the player holds, and is it blockable. */
+  function trioCounts(board, trio) {
+    var a = 0, b = 0, empty = 0;
+    for (var i = 0; i < 3; i++) {
+      var v = board[trio[i]];
+      if (v === 'A') a++; else if (v === 'B') b++; else empty++;
+    }
+    return { A: a, B: b, empty: empty };
+  }
+
+  function mobility(state, player) {
+    var n = 0;
+    for (var from = 0; from < G.NODE_COUNT; from++) {
+      if (state.board[from] !== player) continue;
+      var adj = G.adjacency[from];
+      for (var i = 0; i < adj.length; i++) if (state.board[adj[i]] === null) n++;
+    }
+    return n;
+  }
+
+  function evaluate(state, me) {
+    var foe = E.other(me);
+
+    if (state.roundOver) {
+      if (state.roundWinner === me) return 100000;
+      if (state.roundWinner === foe) return -100000;
+      return 0;
+    }
+
+    var score = 0;
+
+    // Material is king — every capture is a step towards emptying the enemy side.
+    score += (state.onBoard[me] - state.onBoard[foe]) * 120;
+
+    // Trios held, and trios one step away. Blocking is weighted slightly higher
+    // than building, which is what makes the AI feel defensively alert.
+    for (var i = 0; i < G.trios.length; i++) {
+      var c = trioCounts(state.board, G.trios[i]);
+      var mine = c[me], theirs = c[foe];
+      if (mine === 3) score += 45;
+      else if (mine === 2 && c.empty === 1) score += 14;
+      else if (mine === 1 && c.empty === 2) score += 3;
+      if (theirs === 3) score -= 45;
+      else if (theirs === 2 && c.empty === 1) score -= 17;
+      else if (theirs === 1 && c.empty === 2) score -= 3;
+    }
+
+    // Mobility, and the trap penalty: a soldier with nowhere to go is a liability,
+    // and a side with no moves at all loses the round outright.
+    var myMob = mobility(state, me), foeMob = mobility(state, foe);
+    score += (myMob - foeMob) * 6;
+    if (state.phase === 'movement') {
+      if (myMob === 0) score -= 5000;
+      if (foeMob === 0) score += 5000;
+      if (myMob <= 2) score -= (3 - myMob) * 40;
+    }
+
+    // Hold the connectors — they are the only way between the three rings.
+    for (var n = 0; n < G.NODE_COUNT; n++) {
+      if (state.board[n] === me) score += DEGREE[n] * 2;
+      else if (state.board[n] === foe) score -= DEGREE[n] * 2;
+    }
+
+    return score;
+  }
+
+  function search(state, depth, alpha, beta, me, budget) {
+    if (budget.nodes++ > budget.limit) return evaluate(state, me);
+    if (depth <= 0 || state.roundOver || state.matchOver) return evaluate(state, me);
+
+    var actions = E.legalActions(state);
+    if (!actions.length) return evaluate(state, me);
+
+    var mover = state.awaitingCapture || state.turn;
+    var maximizing = mover === me;
+    var best = maximizing ? -Infinity : Infinity;
+
+    for (var i = 0; i < actions.length; i++) {
+      var next = E.clone(state);
+      E.apply(next, actions[i]);
+      var value = search(next, depth - 1, alpha, beta, me, budget);
+      if (maximizing) {
+        if (value > best) best = value;
+        if (best > alpha) alpha = best;
+      } else {
+        if (value < best) best = value;
+        if (best < beta) beta = best;
+      }
+      if (beta <= alpha) break; // prune
+    }
+    return best;
+  }
+
+  /**
+   * Choose an action for the side to move (or to capture). Returns null when
+   * there is nothing to do.
+   */
+  function chooseAction(state) {
+    var mover = state.awaitingCapture || state.turn;
+    var actions = E.legalActions(state);
+    if (!actions.length) return null;
+    if (actions.length === 1) return actions[0];
+
+    var cfg = DEPTH[state.difficulty] || DEPTH.normal;
+    var depth = state.phase === 'placement' ? cfg.place : cfg.move;
+    var budget = { nodes: 0, limit: 60000 };
+
+    var scored = actions.map(function (action) {
+      var next = E.clone(state);
+      E.apply(next, action);
+      var value = search(next, depth - 1, -Infinity, Infinity, mover, budget);
+      if (cfg.noise) value += (Math.random() * 2 - 1) * cfg.noise;
+      return { action: action, value: value };
+    });
+
+    scored.sort(function (x, y) { return y.value - x.value; });
+    return scored[0].action;
+  }
+
+  KZ.AI = {
+    chooseAction: chooseAction,
+    evaluate: evaluate
+  };
+})(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
+
+
+/* ===== js/render.js ===== */
+/* Kwanza Square — board rendering.
+ *
+ * Everything you see is generated here as SVG: the three squares, the radial
+ * connectors, 24 unique motif tiles, the sacred centre medallion, the soldiers
+ * and all the animations. No image files, no external assets.
+ *
+ * The board keeps Martin's original colours — royal blue, orange, black, white.
+ *
+ * Note on ids: every board gets its own id prefix. Two SVGs sharing an id like
+ * "kz-bg" would collide, and a paint server that lives inside a display:none
+ * screen does not resolve for other SVGs — which silently blanks the board.
+ */
+(function (KZ) {
+  'use strict';
+
+  var G = KZ.Geometry;
+  var NS = 'http://www.w3.org/2000/svg';
+
+  var BOARD = {
+    blue: '#1B4BA8',
+    blueDeep: '#10306B',
+    orange: '#E4711E',
+    orangeLift: '#F79438',
+    black: '#101010',
+    white: '#FFFFFF'
+  };
+
+  var TILE = 72;      // painted motif tile
+  var SEAT = 19;      // where a soldier sits
+  var PAWN = 30;
+  var HIT = 56;       // generous invisible tap target for phones
+
+  var uid = 0;
+
+  function el(name, attrs, parent) {
+    var node = document.createElementNS(NS, name);
+    if (attrs) for (var k in attrs) if (attrs.hasOwnProperty(k)) node.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  // ------------------------------------------------------------------ motifs
+  // Twelve geometric figures, each drawn in a 72x72 tile, in two colourways —
+  // 24 distinct intersections, mirroring the 24 hand-painted squares on the
+  // original board. These are abstract stand-ins for Martin's own artwork.
+
+  function motif(index, ink, accent) {
+    var g = '';
+    var h = TILE / 2 - 8;
+    function poly(pts, fill, stroke, w) {
+      return '<polygon points="' + pts + '" fill="' + (fill || 'none') + '"' +
+        (stroke ? ' stroke="' + stroke + '" stroke-width="' + (w || 3) + '"' : '') +
+        ' stroke-linejoin="round"/>';
+    }
+    function line(x1, y1, x2, y2, stroke, w) {
+      return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="' + stroke + '" stroke-width="' + (w || 3) + '" stroke-linecap="round"/>';
+    }
+    function circ(cx, cy, r, fill, stroke, w) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + (fill || 'none') + '"' +
+        (stroke ? ' stroke="' + stroke + '" stroke-width="' + (w || 3) + '"' : '') + '/>';
+    }
+    function diamond(r) { return [-0 + ',' + -r, r + ',' + 0, 0 + ',' + r, -r + ',' + 0].join(' '); }
+
+    switch (index) {
+      case 0:
+        g += poly(diamond(h), 'none', ink, 3.4);
+        g += poly(diamond(h * 0.64), 'none', accent, 3);
+        g += poly(diamond(h * 0.3), ink);
+        break;
+      case 1:
+        for (var c = 0; c < 3; c++) {
+          var y = -h + 6 + c * (h * 0.72);
+          g += '<polyline points="' + (-h) + ',' + (y + 12) + ' 0,' + y + ' ' + h + ',' + (y + 12) +
+            '" fill="none" stroke="' + (c % 2 ? accent : ink) + '" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>';
+        }
+        break;
+      case 2:
+        g += '<ellipse cx="0" cy="0" rx="' + (h * 0.56) + '" ry="' + h + '" fill="' + ink + '"/>';
+        g += line(0, -h * 0.62, 0, h * 0.62, accent, 3.2);
+        for (var d = -2; d <= 2; d++) g += line(-4, d * 9, 4, d * 9, accent, 2);
+        break;
+      case 3:
+        g += line(-h, h * 0.55, h, h * 0.55, ink, 4);
+        for (var t = 0; t < 5; t++) {
+          var x = -h + 4 + t * ((2 * h - 8) / 4);
+          g += line(x, h * 0.55, x, -h * 0.7, t % 2 ? accent : ink, 3.4);
+        }
+        break;
+      case 4:
+        g += line(0, -h, 0, h, ink, 5);
+        g += line(-h, 0, h, 0, ink, 5);
+        g += circ(h * 0.6, -h * 0.6, 4.6, accent);
+        g += circ(-h * 0.6, -h * 0.6, 4.6, accent);
+        g += circ(h * 0.6, h * 0.6, 4.6, accent);
+        g += circ(-h * 0.6, h * 0.6, 4.6, accent);
+        break;
+      case 5:
+        for (var row = 0; row < 2; row++) {
+          var pts = [], yy = -h * 0.5 + row * h * 0.95;
+          for (var i = 0; i <= 4; i++) pts.push((-h + i * (h / 2)) + ',' + (yy + (i % 2 ? 11 : -11)));
+          g += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + (row ? accent : ink) +
+            '" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>';
+        }
+        break;
+      case 6:
+        g += '<rect x="' + (-h) + '" y="' + (-h) + '" width="' + (2 * h) + '" height="' + (2 * h) + '" fill="none" stroke="' + ink + '" stroke-width="3.4"/>';
+        g += '<rect x="' + (-h * 0.6) + '" y="' + (-h * 0.6) + '" width="' + (1.2 * h) + '" height="' + (1.2 * h) + '" fill="none" stroke="' + accent + '" stroke-width="3"/>';
+        g += '<rect x="' + (-h * 0.22) + '" y="' + (-h * 0.22) + '" width="' + (0.44 * h) + '" height="' + (0.44 * h) + '" fill="' + ink + '"/>';
+        break;
+      case 7:
+        for (var k = 0; k < 4; k++) {
+          var x0 = -h + k * (h / 2), up = k % 2 === 0;
+          g += poly(up
+            ? (x0 + ',' + h * 0.7 + ' ' + (x0 + h / 2) + ',' + (-h * 0.7) + ' ' + (x0 + h) + ',' + h * 0.7)
+            : (x0 + ',' + (-h * 0.7) + ' ' + (x0 + h / 2) + ',' + h * 0.7 + ' ' + (x0 + h) + ',' + (-h * 0.7)),
+            up ? ink : accent);
+        }
+        break;
+      case 8:
+        g += circ(0, 0, h * 0.42, ink);
+        for (var s = 0; s < 8; s++) {
+          var a = (Math.PI / 4) * s;
+          g += line(Math.cos(a) * h * 0.58, Math.sin(a) * h * 0.58,
+                    Math.cos(a) * h, Math.sin(a) * h, accent, 3.2);
+        }
+        break;
+      case 9:
+        for (var w = -1; w <= 1; w++) {
+          g += line(-h, w * h * 0.6, h, w * h * 0.6, ink, 3.2);
+          g += line(w * h * 0.6, -h, w * h * 0.6, h, accent, 3.2);
+        }
+        break;
+      case 10:
+        g += '<path d="M ' + (-h) + ' ' + h + ' L ' + (-h) + ' ' + (-h) + ' L ' + h + ' ' + (-h) +
+          ' L ' + h + ' ' + (h * 0.45) + ' L ' + (-h * 0.45) + ' ' + (h * 0.45) +
+          ' L ' + (-h * 0.45) + ' ' + (-h * 0.4) + ' L ' + (h * 0.4) + ' ' + (-h * 0.4) +
+          '" fill="none" stroke="' + ink + '" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>';
+        g += circ(0, h * 0.78, 4.4, accent);
+        break;
+      default:
+        g += '<path d="M ' + (-h * 0.2) + ' ' + (-h) + ' A ' + h + ' ' + h + ' 0 0 0 ' + (-h * 0.2) + ' ' + h +
+          ' A ' + (h * 0.66) + ' ' + h + ' 0 0 1 ' + (-h * 0.2) + ' ' + (-h) + ' Z" fill="' + ink + '"/>';
+        g += '<path d="M ' + (h * 0.34) + ' ' + (-h * 0.72) + ' A ' + (h * 0.72) + ' ' + (h * 0.72) + ' 0 0 0 ' + (h * 0.34) + ' ' + (h * 0.72) +
+          ' A ' + (h * 0.46) + ' ' + (h * 0.72) + ' 0 0 1 ' + (h * 0.34) + ' ' + (-h * 0.72) + ' Z" fill="' + accent + '"/>';
+    }
+    return g;
+  }
+
+  function motifFor(id) {
+    var scheme = Math.floor(id / 12);
+    return motif(id % 12,
+      scheme ? BOARD.white : BOARD.orange,
+      scheme ? BOARD.orangeLift : BOARD.white);
+  }
+
+  // ------------------------------------------------------------------- board
+
+  function defs(svg, p) {
+    var d = el('defs', null, svg);
+
+    var bg = el('radialGradient', { id: p + '-bg', cx: '50%', cy: '42%', r: '78%' }, d);
+    el('stop', { offset: '0%', 'stop-color': BOARD.blue }, bg);
+    el('stop', { offset: '100%', 'stop-color': BOARD.blueDeep }, bg);
+
+    var gold = el('radialGradient', { id: p + '-gold', cx: '34%', cy: '30%', r: '76%' }, d);
+    el('stop', { offset: '0%', 'stop-color': '#FFE9A8' }, gold);
+    el('stop', { offset: '45%', 'stop-color': '#E9B833' }, gold);
+    el('stop', { offset: '100%', 'stop-color': '#8A6408' }, gold);
+
+    var black = el('radialGradient', { id: p + '-black', cx: '34%', cy: '30%', r: '76%' }, d);
+    el('stop', { offset: '0%', 'stop-color': '#6A6A6A' }, black);
+    el('stop', { offset: '48%', 'stop-color': '#1C1C1C' }, black);
+    el('stop', { offset: '100%', 'stop-color': '#000000' }, black);
+
+    // the sacred centre's glow — a soft falloff, not a flat disc
+    var aura = el('radialGradient', { id: p + '-aura', cx: '50%', cy: '50%', r: '50%' }, d);
+    el('stop', { offset: '55%', 'stop-color': BOARD.orangeLift, 'stop-opacity': 0.55 }, aura);
+    el('stop', { offset: '78%', 'stop-color': BOARD.orange, 'stop-opacity': 0.28 }, aura);
+    el('stop', { offset: '100%', 'stop-color': BOARD.orange, 'stop-opacity': 0 }, aura);
+
+    var pat = el('pattern', { id: p + '-weave', width: 44, height: 44, patternUnits: 'userSpaceOnUse' }, d);
+    el('path', {
+      d: 'M0 22 L22 0 L44 22 L22 44 Z',
+      fill: 'none', stroke: 'rgba(255,255,255,.06)', 'stroke-width': 1.4
+    }, pat);
+
+    var glow = el('filter', { id: p + '-glow', x: '-60%', y: '-60%', width: '220%', height: '220%' }, d);
+    el('feGaussianBlur', { stdDeviation: 7, result: 'b' }, glow);
+    var merge = el('feMerge', null, glow);
+    el('feMergeNode', { in: 'b' }, merge);
+    el('feMergeNode', { in: 'SourceGraphic' }, merge);
+  }
+
+  function drawLines(layer) {
+    G.segments.forEach(function (seg) {
+      var a = G.node(seg[0]), b = G.node(seg[1]);
+      var common = { x1: a.x, y1: a.y, x2: b.x, y2: b.y, 'stroke-linecap': 'round' };
+      el('line', Object.assign({}, common, { stroke: 'rgba(0,0,0,.4)', 'stroke-width': 15 }), layer);
+      el('line', Object.assign({}, common, { stroke: BOARD.orange, 'stroke-width': 8 }), layer);
+    });
+  }
+
+  function drawLettering(layer) {
+    // "KWANZA" sits between the outer and middle squares, mirrored top and
+    // bottom exactly as on the painted board.
+    var bottom = el('text', {
+      x: G.CENTER, y: 858, 'text-anchor': 'middle', class: 'board-legend',
+      'font-size': 44, 'font-weight': 600
+    }, layer);
+    bottom.textContent = 'KWANZA';
+
+    var top = el('text', {
+      x: G.CENTER, y: 158, 'text-anchor': 'middle', class: 'board-legend',
+      'font-size': 44, 'font-weight': 600,
+      transform: 'rotate(180 ' + G.CENTER + ' 143)'
+    }, layer);
+    top.textContent = 'KWANZA';
+
+    // The two mottos run up the left and right bands, as on the painted board.
+    // translate() runs first, then rotate() about the centre: a baseline at
+    // (500, 152) maps to x=152 under rotate(-90) and x=848 under rotate(90).
+    var left = el('text', {
+      x: G.CENTER, y: 0, 'text-anchor': 'middle', class: 'board-motto', 'font-size': 23,
+      transform: 'rotate(-90 ' + G.CENTER + ' ' + G.CENTER + ') translate(0 152)'
+    }, layer);
+    left.textContent = 'Jeu Africain traditionnel et mystique de ruse et de stratégie';
+
+    var right = el('text', {
+      x: G.CENTER, y: 0, 'text-anchor': 'middle', class: 'board-motto', 'font-size': 23,
+      transform: 'rotate(90 ' + G.CENTER + ' ' + G.CENTER + ') translate(0 152)'
+    }, layer);
+    right.textContent = 'A mystical African traditional game of wit and strategic thinking';
+  }
+
+  /** The sacred centre. Decorative, breathing, and never playable. */
+  function drawCenter(layer, prefix) {
+    var g = el('g', { transform: 'translate(' + G.CENTER + ',' + G.CENTER + ')', 'pointer-events': 'none' }, layer);
+    el('circle', { r: 132, fill: 'url(#' + prefix + '-aura)', class: 'center-aura' }, g);
+
+    function ring(r, fill, stroke, w) {
+      var pts = [];
+      for (var i = 0; i < 12; i++) {
+        var a = (Math.PI * 2 / 12) * i - Math.PI / 2;
+        pts.push((Math.cos(a) * r).toFixed(1) + ',' + (Math.sin(a) * r).toFixed(1));
+      }
+      el('polygon', { points: pts.join(' '), fill: fill, stroke: stroke || 'none', 'stroke-width': w || 0 }, g);
+    }
+    ring(96, BOARD.black, BOARD.white, 3);
+    ring(82, BOARD.orange);
+    ring(66, BOARD.blue, BOARD.white, 2);
+
+    var spin = el('g', { class: 'center-spin' }, g);
+    for (var i = 0; i < 8; i++) {
+      var a = (Math.PI * 2 / 8) * i;
+      var x = Math.cos(a) * 40, y = Math.sin(a) * 40;
+      el('ellipse', {
+        cx: x.toFixed(1), cy: y.toFixed(1), rx: 6, ry: 15,
+        fill: BOARD.white, opacity: 0.9,
+        transform: 'rotate(' + ((a * 180 / Math.PI) + 90).toFixed(1) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')'
+      }, spin);
+    }
+    el('circle', { r: 13, fill: BOARD.orange, stroke: BOARD.white, 'stroke-width': 2.5 }, g);
+  }
+
+  function drawNode(layer, node, prefix, onPick) {
+    var g = el('g', {
+      class: 'node',
+      'data-node': node.id,
+      transform: 'translate(' + node.x + ',' + node.y + ')'
+    }, layer);
+
+    var tile = el('g', { class: 'tile' }, g);
+    el('rect', {
+      x: -TILE / 2, y: -TILE / 2, width: TILE, height: TILE, rx: 6,
+      fill: BOARD.black, stroke: BOARD.white, 'stroke-width': 2.5
+    }, tile);
+    el('g', null, tile).innerHTML = motifFor(node.id);
+
+    el('circle', {
+      class: 'node-halo', r: 40, fill: 'none',
+      stroke: BOARD.orangeLift, 'stroke-width': 6, filter: 'url(#' + prefix + '-glow)'
+    }, g);
+    el('circle', {
+      class: 'node-seat', r: SEAT, fill: 'rgba(0,0,0,.35)',
+      stroke: 'rgba(255,255,255,.4)', 'stroke-width': 2
+    }, g);
+
+    // shown only on intersections where a placement would complete a trio
+    var forbid = el('g', { class: 'forbid-mark' }, g);
+    el('circle', { r: 26, fill: 'rgba(0,0,0,.55)' }, forbid);
+    el('line', { x1: -13, y1: -13, x2: 13, y2: 13, stroke: '#FF6B6B', 'stroke-width': 5, 'stroke-linecap': 'round' }, forbid);
+    el('line', { x1: 13, y1: -13, x2: -13, y2: 13, stroke: '#FF6B6B', 'stroke-width': 5, 'stroke-linecap': 'round' }, forbid);
+
+    el('g', { class: 'pawn-slot' }, g);
+    // drawn after the pawn so a scored trio reads clearly on top of the soldier
+    el('circle', { class: 'trio-ring', r: 37, fill: 'none', 'stroke-width': 5, filter: 'url(#' + prefix + '-glow)' }, g);
+    el('circle', { class: 'select-ring', r: 42, fill: 'none', stroke: '#FFE9A8', 'stroke-width': 5, filter: 'url(#' + prefix + '-glow)' }, g);
+    el('circle', { class: 'capture-ring', r: 42, fill: 'none', stroke: '#FF5A5A', 'stroke-width': 5, filter: 'url(#' + prefix + '-glow)' }, g);
+
+    var hit = el('circle', { class: 'node-hit', r: HIT }, g);
+    if (onPick) {
+      hit.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        onPick(node.id);
+      });
+    }
+    return g;
+  }
+
+  function pawnShape(player, prefix) {
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'pawn');
+    el('circle', {
+      class: 'pawn-body', r: PAWN,
+      fill: 'url(#' + prefix + (player === 'A' ? '-gold' : '-black') + ')',
+      stroke: player === 'A' ? '#6B4D06' : '#FFFFFF',
+      'stroke-width': player === 'A' ? 3 : 2.5
+    }, g);
+    el('circle', {
+      r: PAWN - 10, fill: 'none',
+      stroke: player === 'A' ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.3)',
+      'stroke-width': 2
+    }, g);
+    el('circle', { r: 4, fill: player === 'A' ? '#6B4D06' : 'rgba(255,255,255,.6)' }, g);
+    return g;
+  }
+
+  // ------------------------------------------------------------------ public
+
+  /**
+   * Build a board into an <svg> element.
+   * onPick(nodeId) is called on tap; omit it for a static illustration.
+   */
+  function build(svg, onPick) {
+    var prefix = 'kz' + (++uid);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', '0 0 1000 1000');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    defs(svg, prefix);
+    el('rect', { x: 0, y: 0, width: 1000, height: 1000, fill: 'url(#' + prefix + '-bg)' }, svg);
+    el('rect', { x: 0, y: 0, width: 1000, height: 1000, fill: 'url(#' + prefix + '-weave)' }, svg);
+    el('rect', { x: 14, y: 14, width: 972, height: 972, rx: 10, fill: 'none', stroke: BOARD.black, 'stroke-width': 10 }, svg);
+    el('rect', { x: 14, y: 14, width: 972, height: 972, rx: 10, fill: 'none', stroke: 'rgba(255,255,255,.18)', 'stroke-width': 2 }, svg);
+
+    drawLines(el('g', { class: 'line-layer' }, svg));
+    drawLettering(el('g', { class: 'text-layer', 'pointer-events': 'none' }, svg));
+
+    var trioLayer = el('g', { class: 'trio-layer', 'pointer-events': 'none' }, svg);
+    drawCenter(svg, prefix);
+
+    var nodeLayer = el('g', { class: 'node-layer' }, svg);
+    var nodeEls = G.nodes.map(function (n) { return drawNode(nodeLayer, n, prefix, onPick); });
+
+    var fxLayer = el('g', { class: 'fx-layer', 'pointer-events': 'none' }, svg);
+
+    return {
+      svg: svg, prefix: prefix, nodes: nodeEls,
+      trioLayer: trioLayer, fxLayer: fxLayer,
+      owners: new Array(24).fill(null)
+    };
+  }
+
+  /**
+   * Sync a built board to a view model:
+   *   { board, legal:Set, forbidden:Set, capturable:Set,
+   *     selected, staged, trios:[{trio,player}], lastMove }
+   */
+  function update(view, vm) {
+    var legal = vm.legal || new Set();
+    var forbidden = vm.forbidden || new Set();
+    var capturable = vm.capturable || new Set();
+
+    // which soldiers are standing in a scored trio
+    var inTrio = {};
+    (vm.trios || []).forEach(function (entry) {
+      G.trios[entry.trio].forEach(function (n) { inTrio[n] = entry.player; });
+    });
+
+    for (var i = 0; i < 24; i++) {
+      var g = view.nodes[i];
+      var owner = vm.board[i];
+
+      if (view.owners[i] !== owner) {
+        var slot = g.querySelector('.pawn-slot');
+        while (slot.firstChild) slot.removeChild(slot.firstChild);
+        if (owner) {
+          var pawn = pawnShape(owner, view.prefix);
+          slot.appendChild(pawn);
+          if (view.owners[i] === null) {
+            pawn.classList.add('place-pop');
+            pawn.addEventListener('animationend', function (ev) {
+              ev.currentTarget.classList.remove('place-pop');
+            }, { once: true });
+          }
+        }
+        view.owners[i] = owner;
+      }
+
+      g.classList.toggle('legal', legal.has(i));
+      g.classList.toggle('forbidden', forbidden.has(i));
+      g.classList.toggle('selected', vm.selected === i || vm.staged === i);
+      g.classList.toggle('capturable', capturable.has(i));
+      g.classList.toggle('last-move', !!vm.lastMove && vm.lastMove.to === i);
+      g.classList.toggle('in-trio-a', inTrio[i] === 'A');
+      g.classList.toggle('in-trio-b', inTrio[i] === 'B');
+    }
+
+    var layer = view.trioLayer;
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+    (vm.trios || []).forEach(function (entry) {
+      var t = G.trios[entry.trio];
+      var a = G.node(t[0]), c = G.node(t[2]);
+      el('line', {
+        class: 'trio-glow',
+        x1: a.x, y1: a.y, x2: c.x, y2: c.y,
+        stroke: entry.player === 'A' ? '#FFD36B' : '#FFFFFF',
+        'stroke-width': 14, 'stroke-linecap': 'round',
+        filter: 'url(#' + view.prefix + '-glow)'
+      }, layer);
+    });
+  }
+
+  /** Expanding ring where a soldier was taken. */
+  function burst(view, nodeId, player) {
+    var n = G.node(nodeId);
+    var c = el('circle', {
+      class: 'capture-burst',
+      cx: n.x, cy: n.y, r: 34, fill: 'none',
+      stroke: player === 'A' ? '#FFD36B' : '#FFFFFF',
+      'stroke-width': 8, filter: 'url(#' + view.prefix + '-glow)'
+    }, view.fxLayer);
+    c.addEventListener('animationend', function () {
+      if (c.parentNode) c.parentNode.removeChild(c);
+    }, { once: true });
+  }
+
+  /** Small emblem used on the home screen and the result card. */
+  function emblem(svg) {
+    var prefix = 'kz' + (++uid);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', '0 0 1000 1000');
+    defs(svg, prefix);
+    el('rect', { x: 0, y: 0, width: 1000, height: 1000, rx: 90, fill: 'url(#' + prefix + '-bg)' }, svg);
+    el('rect', { x: 22, y: 22, width: 956, height: 956, rx: 78, fill: 'none', stroke: BOARD.black, 'stroke-width': 14 }, svg);
+    var lines = el('g', null, svg);
+    G.segments.forEach(function (seg) {
+      var a = G.node(seg[0]), b = G.node(seg[1]);
+      el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: BOARD.orange, 'stroke-width': 14, 'stroke-linecap': 'round' }, lines);
+    });
+    G.nodes.forEach(function (n) {
+      el('circle', { cx: n.x, cy: n.y, r: 26, fill: BOARD.black, stroke: BOARD.white, 'stroke-width': 5 }, svg);
+    });
+    drawCenter(svg, prefix);
+  }
+
+  KZ.Render = {
+    BOARD: BOARD,
+    build: build,
+    update: update,
+    burst: burst,
+    emblem: emblem,
+    motifFor: motifFor
+  };
+})(window.KZ = window.KZ || {});
+
+
+/* ===== js/app.js ===== */
+/* Kwanza Square — screens, input, AI turns, tutorial, scoreboard. */
+(function (KZ) {
+  'use strict';
+
+  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render;
+
+  var state = null;        // current match
+  var view = null;         // built board
+  var history = [];        // snapshots for Undo
+  var selected = null;     // chosen soldier (movement phase)
+  var staged = null;       // {type:'move',from,to} | {type:'capture',node} when confirm is on
+  var thinking = false;    // AI is choosing
+  var flashTimer = null;
+
+  var settings = {
+    sound: true,
+    confirm: false,
+    difficulty: 'normal',
+    mode: 'ai'
+  };
+
+  // ------------------------------------------------------------------ helpers
+
+  function $(sel) { return document.querySelector(sel); }
+  function $all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem('kwanza-settings');
+      if (raw) Object.assign(settings, JSON.parse(raw));
+    } catch (e) { /* private mode — defaults are fine */ }
+  }
+  function saveSettings() {
+    try { localStorage.setItem('kwanza-settings', JSON.stringify(settings)); } catch (e) {}
+  }
+
+  // tiny generated sounds — no audio files
+  var audioCtx = null;
+  function tone(freq, dur, type, gain) {
+    if (!settings.sound) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(gain || 0.06, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+  var sfx = {
+    place:   function () { tone(320, 0.12, 'triangle'); },
+    select:  function () { tone(520, 0.07, 'sine', 0.04); },
+    move:    function () { tone(400, 0.1, 'triangle'); },
+    trio:    function () { tone(660, 0.16, 'sine', 0.07); setTimeout(function () { tone(880, 0.2, 'sine', 0.06); }, 110); },
+    capture: function () { tone(180, 0.24, 'sawtooth', 0.05); },
+    deny:    function () { tone(120, 0.16, 'square', 0.04); },
+    win:     function () { [523, 659, 784, 1046].forEach(function (f, i) { setTimeout(function () { tone(f, 0.24, 'sine', 0.06); }, i * 130); }); }
+  };
+
+  function showScreen(id) {
+    $all('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+  }
+
+  function humanSide() { return state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : state.turn; }
+  function isHumanTurn() {
+    if (state.mode !== 'ai') return true;
+    var mover = state.awaitingCapture || state.turn;
+    return mover !== state.aiSide;
+  }
+
+  function flash(text) {
+    var p = $('#prompt-text');
+    p.textContent = text;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(render, 1400);
+  }
+
+  // --------------------------------------------------------------- view model
+
+  function buildViewModel() {
+    var vm = {
+      board: state.board,
+      legal: new Set(),
+      forbidden: new Set(),
+      capturable: new Set(),
+      selected: selected,
+      staged: staged ? (staged.type === 'move' ? staged.to : staged.node) : null,
+      trios: state.activeTrios,
+      lastMove: state.lastMove[E.other(state.turn)] || null
+    };
+
+    if (state.roundOver || state.matchOver || !isHumanTurn()) return vm;
+
+    if (state.awaitingCapture) {
+      E.capturableNodes(state, state.awaitingCapture).forEach(function (n) { vm.capturable.add(n); });
+    } else if (state.phase === 'placement') {
+      // Every free intersection is playable, so highlighting them all is noise.
+      // Mark only the ones the no-trio rule closes off.
+      var open = new Set(E.legalPlacements(state));
+      for (var n = 0; n < G.NODE_COUNT; n++) {
+        if (state.board[n] === null && !open.has(n)) vm.forbidden.add(n);
+      }
+    } else if (selected !== null) {
+      E.legalMovesFrom(state, selected).forEach(function (n) { vm.legal.add(n); });
+    } else {
+      // nothing selected: highlight the soldiers that actually have somewhere to go
+      E.allMoves(state, state.turn).forEach(function (m) { vm.legal.add(m.from); });
+    }
+    return vm;
+  }
+
+  // ------------------------------------------------------------------ actions
+
+  function pushHistory() {
+    history.push(E.clone(state));
+    if (history.length > 240) history.shift();
+  }
+
+  function applyAction(action) {
+    pushHistory();
+    var events = E.apply(state, action);
+    handleEvents(events);
+    selected = null;
+    staged = null;
+    render();
+    scheduleAI();
+    return events;
+  }
+
+  function handleEvents(events) {
+    events.forEach(function (ev) {
+      if (ev.type === 'place') sfx.place();
+      if (ev.type === 'move') sfx.move();
+      if (ev.type === 'trio') sfx.trio();
+      if (ev.type === 'trio-void') flash('A first move cannot score.');
+      if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
+      if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
+    });
+  }
+
+  function onPick(nodeId) {
+    if (!state || state.roundOver || state.matchOver || thinking || !isHumanTurn()) return;
+
+    // capture step
+    if (state.awaitingCapture) {
+      if (state.board[nodeId] !== E.other(state.awaitingCapture)) {
+        if (state.board[nodeId]) flash('Take one of your opponent’s soldiers.');
+        return;
+      }
+      if (settings.confirm) {
+        staged = { type: 'capture', node: nodeId };
+        sfx.select();
+        render();
+      } else {
+        applyAction({ type: 'capture', node: nodeId });
+      }
+      return;
+    }
+
+    // placement phase
+    if (state.phase === 'placement') {
+      if (state.board[nodeId] !== null) { flash('That intersection is taken.'); sfx.deny(); return; }
+      if (E.placementFormsTrio(state.board, nodeId, state.turn) &&
+          E.legalPlacements(state).indexOf(nodeId) === -1) {
+        flash('No trios during placement — choose another intersection.');
+        sfx.deny();
+        return;
+      }
+      applyAction({ type: 'place', node: nodeId });
+      return;
+    }
+
+    // movement phase
+    if (state.board[nodeId] === state.turn) {
+      if (selected === nodeId) { selected = null; staged = null; }
+      else {
+        if (E.legalMovesFrom(state, nodeId).length === 0) {
+          flash('That soldier has nowhere to go.');
+          sfx.deny();
+          return;
+        }
+        selected = nodeId;
+        staged = null;
+        sfx.select();
+      }
+      render();
+      return;
+    }
+
+    if (selected !== null && state.board[nodeId] === null) {
+      if (E.legalMovesFrom(state, selected).indexOf(nodeId) === -1) {
+        var adjacent = G.adjacency[selected].indexOf(nodeId) !== -1;
+        flash(adjacent ? 'No back-and-forth — that undoes your last move.'
+                       : 'Only one step, straight along a line.');
+        sfx.deny();
+        return;
+      }
+      if (settings.confirm) {
+        staged = { type: 'move', from: selected, to: nodeId };
+        sfx.select();
+        render();
+      } else {
+        applyAction({ type: 'move', from: selected, to: nodeId });
+      }
+      return;
+    }
+
+    if (state.board[nodeId] !== null) flash('That is not your soldier.');
+  }
+
+  function confirmStaged() {
+    if (!staged) return;
+    applyAction(staged.type === 'move'
+      ? { type: 'move', from: staged.from, to: staged.to }
+      : { type: 'capture', node: staged.node });
+  }
+
+  function undo() {
+    if (!history.length || thinking) return;
+    if (state.mode === 'ai') {
+      // step back past the AI's reply to the player's own turn
+      var guard = 0;
+      while (history.length && guard++ < 40) {
+        state = history.pop();
+        var mover = state.awaitingCapture || state.turn;
+        if (mover !== state.aiSide && !state.roundOver && !state.matchOver) break;
+      }
+    } else {
+      state = history.pop();
+    }
+    selected = null;
+    staged = null;
+    closeModal();
+    render();
+  }
+
+  // --------------------------------------------------------------------- AI
+
+  function scheduleAI() {
+    if (!state || state.mode !== 'ai') return;
+    if (state.roundOver || state.matchOver) return;
+    var mover = state.awaitingCapture || state.turn;
+    if (mover !== state.aiSide) return;
+
+    thinking = true;
+    render();
+    var delay = state.awaitingCapture ? 560 : (state.phase === 'placement' ? 340 : 460);
+    setTimeout(function () {
+      if (!state || state.roundOver || state.matchOver) { thinking = false; render(); return; }
+      var action = AI.chooseAction(state);
+      thinking = false;
+      if (!action) { render(); return; }
+      pushHistory();
+      handleEvents(E.apply(state, action));
+      render();
+      scheduleAI();
+    }, delay);
+  }
+
+  // ----------------------------------------------------------------- rendering
+
+  function playerName(side) {
+    if (state.mode === 'ai' && side === state.aiSide) return 'Kwanza AI';
+    return side === 'A' ? 'Gold' : 'Black';
+  }
+
+  function render() {
+    if (!state) return;
+    R.update(view, buildViewModel());
+
+    $('#name-a').textContent = playerName('A');
+    $('#name-b').textContent = playerName('B');
+    $('#score-value').textContent = state.scores.A + ' – ' + state.scores.B;
+    $('#score-round').textContent = 'Round ' + state.round + ' · best of 3';
+
+    var pawnsA = state.phase === 'placement'
+      ? state.toPlace.A + ' to place'
+      : state.onBoard.A + ' on board';
+    var pawnsB = state.phase === 'placement'
+      ? state.toPlace.B + ' to place'
+      : state.onBoard.B + ' on board';
+    $('#pawns-a').textContent = pawnsA;
+    $('#pawns-b').textContent = pawnsB;
+
+    var mover = state.awaitingCapture || state.turn;
+    $('#side-a').classList.toggle('active-turn', mover === 'A' && !state.roundOver);
+    $('#side-b').classList.toggle('active-turn', mover === 'B' && !state.roundOver);
+
+    // prompt
+    var prompt = $('#prompt');
+    var tag = $('#prompt-tag');
+    var text = $('#prompt-text');
+    prompt.classList.remove('capture', 'thinking');
+
+    if (state.matchOver) {
+      tag.textContent = 'Match';
+      text.textContent = playerName(state.matchWinner) + ' wins the match.';
+    } else if (state.roundOver) {
+      tag.textContent = 'Round';
+      text.textContent = state.roundWinner
+        ? playerName(state.roundWinner) + ' takes round ' + state.round + '.'
+        : 'Round ' + state.round + ' is drawn.';
+    } else if (thinking) {
+      prompt.classList.add('thinking');
+      tag.textContent = 'Kwanza AI';
+      text.textContent = 'Thinking…';
+    } else if (state.awaitingCapture) {
+      prompt.classList.add('capture');
+      tag.textContent = 'Capture';
+      text.textContent = playerName(state.awaitingCapture) + ' scored — remove any enemy soldier.';
+    } else if (state.phase === 'placement') {
+      tag.textContent = 'Place';
+      text.textContent = playerName(state.turn) + ': place a soldier (' + state.toPlace[state.turn] + ' left).';
+    } else {
+      tag.textContent = 'Move';
+      text.textContent = selected === null
+        ? playerName(state.turn) + ': choose a soldier.'
+        : 'Step to a glowing intersection.';
+    }
+
+    $('#btn-undo').disabled = !history.length || thinking || state.matchOver;
+    var confirmBtn = $('#btn-confirm');
+    confirmBtn.hidden = !settings.confirm;
+    confirmBtn.disabled = !staged;
+  }
+
+  // -------------------------------------------------------------------- modals
+
+  function openModal(html, actions) {
+    var body = $('#modal-body');
+    body.innerHTML = html;
+    var bar = $('#modal-actions');
+    bar.innerHTML = '';
+    (actions || []).forEach(function (a) {
+      var b = document.createElement('button');
+      b.className = 'btn ' + (a.cls || 'btn-ghost');
+      b.textContent = a.label;
+      b.addEventListener('click', a.onClick);
+      bar.appendChild(b);
+    });
+    $('#modal-backdrop').classList.add('open');
+  }
+  function closeModal() { $('#modal-backdrop').classList.remove('open'); }
+
+  function showRoundResult() {
+    if (state.matchOver) {
+      sfx.win();
+      renderScoreboard();
+      showScreen('screen-scoreboard');
+      return;
+    }
+    var winner = state.roundWinner;
+    openModal(
+      '<h2>' + (winner ? playerName(winner) + ' wins round ' + state.round : 'Round ' + state.round + ' drawn') + '</h2>' +
+      '<div class="modal-body"><p>' + state.roundReason + '</p>' +
+      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p></div>',
+      [{
+        label: 'Next round', cls: 'btn-primary', onClick: function () {
+          closeModal();
+          E.nextRound(state);
+          history = [];
+          selected = null; staged = null;
+          render();
+          scheduleAI();
+        }
+      }]
+    );
+  }
+
+  var RULES_HTML =
+    '<div class="modal-body">' +
+    '<h3>The board</h3><ul>' +
+    '<li>Three concentric squares — Territory, Strategy, Mastery.</li>' +
+    '<li>24 playable intersections, eight on each square.</li>' +
+    '<li>Four radial connectors join the squares at north, east, south and west.</li>' +
+    '<li>The centre is sacred and can never be played.</li>' +
+    '</ul>' +
+    '<h3>Phase 1 — placement</h3><ul>' +
+    '<li>Each side has 10 soldiers, placed one at a time.</li>' +
+    '<li>One soldier per intersection.</li>' +
+    '<li>A placement that would complete a trio is not allowed — choose another intersection.</li>' +
+    '<li>Nothing scores in this phase.</li>' +
+    '</ul>' +
+    '<h3>Phase 2 — movement</h3><ul>' +
+    '<li>Move one step along a line to an adjacent free intersection.</li>' +
+    '<li>Vertical and horizontal only. Never diagonal, never skipping.</li>' +
+    '<li>You may not immediately move back where you came from.</li>' +
+    '<li>Your first move of the phase cannot score.</li>' +
+    '</ul>' +
+    '<h3>Scoring and capture</h3><ul>' +
+    '<li>Three of your soldiers in a straight line is a trio. Diagonals never count.</li>' +
+    '<li>A trio lets you remove any one enemy soldier — including one standing inside a trio.</li>' +
+    '</ul>' +
+    '<h3>Winning</h3><ul>' +
+    '<li>A round ends when a side has no soldiers left, or cannot move.</li>' +
+    '<li>The match is best of three.</li>' +
+    '</ul></div>';
+
+  function showRules() {
+    openModal('<h2>Rules of Kwanza Square</h2>' + RULES_HTML,
+      [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]);
+  }
+
+  function confirmQuit() {
+    openModal('<h2>Leave the match?</h2><div class="modal-body"><p>The current match will be lost.</p></div>', [
+      { label: 'Stay', onClick: closeModal },
+      { label: 'Leave', cls: 'btn-danger', onClick: function () { closeModal(); showScreen('screen-home'); } }
+    ]);
+  }
+
+  // ---------------------------------------------------------------- scoreboard
+
+  function renderScoreboard() {
+    $('#final-line').textContent = state.matchWinner
+      ? playerName(state.matchWinner) + ' wins the match'
+      : 'Match complete';
+    $('#final-score').textContent = state.scores.A + ' – ' + state.scores.B;
+    var pills = $('#round-pills');
+    pills.innerHTML = '';
+    state.roundHistory.forEach(function (r) {
+      var span = document.createElement('span');
+      span.className = 'pill ' + (r.winner === 'A' ? 'win-a' : r.winner === 'B' ? 'win-b' : 'draw');
+      span.textContent = 'R' + r.round + ' · ' + (r.winner ? playerName(r.winner) : 'Draw');
+      span.title = r.reason;
+      pills.appendChild(span);
+    });
+    var log = $('#final-reasons');
+    log.innerHTML = state.roundHistory.map(function (r) {
+      return '<li>Round ' + r.round + ': ' + r.reason + '</li>';
+    }).join('');
+    R.emblem($('#final-emblem'));
+  }
+
+  // ------------------------------------------------------------------ tutorial
+
+  var tutorialSteps = [
+    {
+      title: 'The three squares',
+      text: 'Kwanza Square is played on three concentric squares — Territory, Strategy and Mastery — with eight intersections each. That is 24 playable points. The medallion at the heart of the board is sacred: no soldier ever stands there.',
+      vm: function () { return { board: new Array(24).fill(null) }; }
+    },
+    {
+      title: 'The four connectors',
+      text: 'Four radial connectors join the squares at north, east, south and west. They are the only way to travel between rings, which makes those four midpoints the most valuable ground on the board.',
+      vm: function () {
+        var b = new Array(24).fill(null);
+        b[9] = 'A';
+        return { board: b, selected: 9, legal: new Set([1, 17, 8, 10]) };
+      }
+    },
+    {
+      title: 'Phase 1 — placement',
+      text: 'Each side places 10 soldiers, one at a time, one per intersection. A placement that would complete a trio is refused — you must choose somewhere else. Nothing scores during placement.',
+      vm: function () {
+        var b = new Array(24).fill(null);
+        b[0] = 'A'; b[1] = 'A'; b[8] = 'B'; b[3] = 'B'; b[16] = 'B'; b[5] = 'A';
+        return { board: b, capturable: new Set([2]) };
+      }
+    },
+    {
+      title: 'Phase 2 — movement',
+      text: 'Once all 20 soldiers are down, you move one step along a line to an adjacent free point. Vertical and horizontal only — never diagonal, never skipping — and you may not immediately step back where you came from.',
+      vm: function () {
+        var b = new Array(24).fill(null);
+        b[3] = 'A'; b[8] = 'B'; b[5] = 'B'; b[16] = 'A';
+        return { board: b, selected: 3, legal: new Set([2, 4, 11]) };
+      }
+    },
+    {
+      title: 'Trios score',
+      text: 'Three of your soldiers in a straight line is a trio. It may run along an edge of any square, or straight down a radial connector. A diagonal is never a trio.',
+      vm: function () {
+        var b = new Array(24).fill(null);
+        b[8] = 'A'; b[9] = 'A'; b[10] = 'A'; b[17] = 'B'; b[20] = 'B';
+        return { board: b, trios: [{ trio: G.trios.findIndex(function (t) { return t[0] === 8 && t[1] === 9 && t[2] === 10; }), player: 'A' }] };
+      }
+    },
+    {
+      title: 'Capture, and the match',
+      text: 'Every trio you complete lets you remove one enemy soldier — any one you like, including a soldier standing inside a trio of its own. A round ends when a side has no soldiers left or cannot move. First to two rounds takes the match.',
+      vm: function () {
+        var b = new Array(24).fill(null);
+        b[8] = 'A'; b[9] = 'A'; b[10] = 'A'; b[17] = 'B'; b[20] = 'B'; b[1] = 'B';
+        return { board: b, capturable: new Set([17, 20, 1]) };
+      }
+    }
+  ];
+
+  var tutorialIndex = 0;
+  var tutorialView = null;
+
+  function renderTutorial() {
+    var step = tutorialSteps[tutorialIndex];
+    if (!tutorialView) tutorialView = R.build($('#tutorial-board'), null);
+    var vm = step.vm();
+    vm.board = vm.board || new Array(24).fill(null);
+    R.update(tutorialView, vm);
+    $('#tutorial-title').textContent = step.title;
+    $('#tutorial-text').textContent = step.text;
+    $('#tutorial-prev').disabled = tutorialIndex === 0;
+    $('#tutorial-next').textContent = tutorialIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
+    var dots = $('#tutorial-dots');
+    dots.innerHTML = '';
+    tutorialSteps.forEach(function (_, i) {
+      var d = document.createElement('span');
+      d.className = 'dot' + (i === tutorialIndex ? ' on' : '');
+      dots.appendChild(d);
+    });
+  }
+
+  // ---------------------------------------------------------------- match setup
+
+  function startMatch() {
+    state = E.createMatch({
+      mode: settings.mode,
+      aiSide: 'B',
+      difficulty: settings.difficulty
+    });
+    history = [];
+    selected = null;
+    staged = null;
+    thinking = false;
+    if (!view) view = R.build($('#board'), onPick);
+    // Do NOT reset view.owners here: it is the record of what is actually drawn.
+    // Clearing it would make the empty new board diff as "no change" and leave
+    // the previous match's soldiers on screen. render() diffs it correctly.
+    showScreen('screen-game');
+    render();
+    scheduleAI();
+  }
+
+  // ---------------------------------------------------------------------- wire
+
+  function syncModeUI() {
+    $all('[data-mode]').forEach(function (btn) {
+      btn.setAttribute('aria-checked', String(btn.dataset.mode === settings.mode));
+    });
+    $('#difficulty-block').hidden = settings.mode !== 'ai';
+    $all('[data-difficulty]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.difficulty === settings.difficulty));
+    });
+    $all('[data-toggle]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(!!settings[btn.dataset.toggle]));
+    });
+  }
+
+  function init() {
+    loadSettings();
+    R.emblem($('#home-emblem'));
+
+    // home
+    $('#btn-play').addEventListener('click', function () { syncModeUI(); showScreen('screen-mode'); });
+    $('#btn-tutorial').addEventListener('click', function () {
+      tutorialIndex = 0; showScreen('screen-tutorial'); renderTutorial();
+    });
+    $('#btn-rules-home').addEventListener('click', showRules);
+
+    // mode select
+    $all('[data-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.mode = btn.dataset.mode; saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-difficulty]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.difficulty = btn.dataset.difficulty; saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings[btn.dataset.toggle] = !settings[btn.dataset.toggle];
+        saveSettings(); syncModeUI();
+        if (state) render();
+      });
+    });
+    $('#btn-start').addEventListener('click', startMatch);
+    $('#btn-mode-back').addEventListener('click', function () { showScreen('screen-home'); });
+
+    // tutorial
+    $('#tutorial-prev').addEventListener('click', function () {
+      if (tutorialIndex > 0) { tutorialIndex--; renderTutorial(); }
+    });
+    $('#tutorial-next').addEventListener('click', function () {
+      if (tutorialIndex < tutorialSteps.length - 1) { tutorialIndex++; renderTutorial(); }
+      else showScreen('screen-home');
+    });
+    $('#tutorial-exit').addEventListener('click', function () { showScreen('screen-home'); });
+
+    // game
+    $('#btn-undo').addEventListener('click', undo);
+    $('#btn-confirm').addEventListener('click', confirmStaged);
+    $('#btn-rules').addEventListener('click', showRules);
+    $('#btn-quit').addEventListener('click', confirmQuit);
+
+    // scoreboard
+    $('#btn-rematch').addEventListener('click', startMatch);
+    $('#btn-scoreboard-home').addEventListener('click', function () { showScreen('screen-home'); });
+
+    $('#modal-backdrop').addEventListener('click', function (ev) {
+      if (ev.target === ev.currentTarget) closeModal();
+    });
+
+    syncModeUI();
+    showScreen('screen-home');
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})(window.KZ = window.KZ || {});
+
+</script>

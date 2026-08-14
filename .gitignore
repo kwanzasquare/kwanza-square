@@ -1,0 +1,10 @@
+# Internal strategy document — monetization, revenue and marketing plans.
+# Deliberately kept out of the public repo.
+KWANZA-SQUARE-MASTER.md
+
+# macOS launcher (built locally, not useful over the web)
+Kwanza Square.app/
+
+# local tooling
+.claude/
+.DS_Store

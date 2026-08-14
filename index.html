@@ -1,0 +1,178 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="description" content="Kwanza Square — a mystical African traditional game of wit and strategic thinking.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Kwanza Square</title>
+<link rel="stylesheet" href="css/styles.css">
+
+<div id="app">
+
+  <!-- ------------------------------------------------------------- home -->
+  <section class="screen active" id="screen-home">
+    <div class="home-wrap">
+      <svg class="brand-mark" id="home-emblem" aria-label="Kwanza Square board"></svg>
+      <div>
+        <div class="eyebrow">Jeu Africain traditionnel</div>
+        <h1 class="brand-title">KWANZA&nbsp;SQUARE</h1>
+        <div class="brand-sub">The African Strategy Game</div>
+      </div>
+      <p class="brand-note">
+        A mystical African traditional game of wit and strategic thinking.
+        Three squares, twenty-four intersections, ten soldiers a side —
+        and a sacred centre no one may hold.
+      </p>
+      <div class="menu">
+        <button class="btn btn-primary" id="btn-play">Play</button>
+        <button class="btn" id="btn-tutorial">How to play</button>
+        <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- mode select -->
+  <section class="screen" id="screen-mode">
+    <div class="scroll-body">
+      <div class="panel">
+        <h2>Choose your opponent</h2>
+        <p class="hint">Pass one device back and forth, or take on the Kwanza AI.</p>
+        <div class="option-grid" role="radiogroup">
+          <div class="option" role="radio" tabindex="0" data-mode="ai" aria-checked="true">
+            <span class="opt-icon">◆</span>
+            <span>
+              <span class="opt-title">Play the Kwanza AI</span>
+              <span class="opt-desc">You are Gold and open the first round.</span>
+            </span>
+          </div>
+          <div class="option" role="radio" tabindex="0" data-mode="local" aria-checked="false">
+            <span class="opt-icon">◈</span>
+            <span>
+              <span class="opt-title">Two players, one device</span>
+              <span class="opt-desc">Gold and Black take turns on the same board.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="difficulty-block">
+        <h2>AI strength</h2>
+        <p class="hint">Hard looks four moves ahead, blocks your trios and avoids traps.</p>
+        <div class="seg">
+          <button class="btn btn-sm" data-difficulty="easy">Easy</button>
+          <button class="btn btn-sm" data-difficulty="normal">Normal</button>
+          <button class="btn btn-sm" data-difficulty="hard">Hard</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Options</h2>
+        <div class="seg">
+          <button class="btn btn-sm" data-toggle="sound">Sound</button>
+          <button class="btn btn-sm" data-toggle="confirm">Tap to confirm</button>
+        </div>
+        <p class="hint">Turn on “tap to confirm” if you find yourself mis-tapping on a small screen.</p>
+      </div>
+
+      <div class="menu">
+        <button class="btn btn-gold" id="btn-start">Start match</button>
+        <button class="btn btn-ghost" id="btn-mode-back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- tutorial -->
+  <section class="screen" id="screen-tutorial">
+    <div class="scroll-body">
+      <div class="panel tutorial-card">
+        <div class="tutorial-figure"><svg id="tutorial-board"></svg></div>
+        <h2 class="tutorial-step-title" id="tutorial-title"></h2>
+        <p class="tutorial-text" id="tutorial-text"></p>
+        <div class="dots" id="tutorial-dots"></div>
+        <div class="tutorial-nav">
+          <button class="btn btn-sm" id="tutorial-prev">Back</button>
+          <button class="btn btn-sm btn-gold" id="tutorial-next">Next</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="tutorial-exit">Close</button>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------------- game -->
+  <section class="screen" id="screen-game">
+    <header class="topbar">
+      <div class="score-side" id="side-a">
+        <span class="chip-pawn gold"></span>
+        <span class="score-meta">
+          <span class="score-name" id="name-a">Gold</span>
+          <span class="score-pawns" id="pawns-a"></span>
+        </span>
+      </div>
+      <div class="score-center">
+        <div class="score-round" id="score-round"></div>
+        <div class="score-value" id="score-value">0 – 0</div>
+      </div>
+      <div class="score-side right" id="side-b">
+        <span class="chip-pawn black"></span>
+        <span class="score-meta">
+          <span class="score-name" id="name-b">Black</span>
+          <span class="score-pawns" id="pawns-b"></span>
+        </span>
+      </div>
+    </header>
+
+    <div class="board-stage">
+      <div class="board-frame"><svg id="board"></svg></div>
+    </div>
+
+    <footer class="actionbar">
+      <div class="prompt" id="prompt">
+        <span class="mode-tag" id="prompt-tag">Place</span>
+        <span id="prompt-text"></span>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-sm" id="btn-undo">Undo</button>
+        <button class="btn btn-sm btn-gold" id="btn-confirm" hidden>Confirm</button>
+        <button class="btn btn-sm" id="btn-rules">Rules</button>
+        <button class="btn btn-sm btn-ghost" id="btn-quit">Menu</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- -------------------------------------------------------- scoreboard -->
+  <section class="screen" id="screen-scoreboard">
+    <div class="scroll-body">
+      <div class="panel" style="text-align:center">
+        <svg class="result-emblem" id="final-emblem"></svg>
+        <div class="eyebrow">Match complete</div>
+        <h2 id="final-line"></h2>
+        <div class="score-value" id="final-score" style="font-size:34px;margin-top:6px"></div>
+        <div class="round-pills" id="round-pills"></div>
+      </div>
+      <div class="panel">
+        <h2>How the rounds fell</h2>
+        <ul class="modal-body" id="final-reasons" style="padding-left:18px"></ul>
+      </div>
+      <div class="menu">
+        <button class="btn btn-gold" id="btn-rematch">Rematch</button>
+        <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/geometry.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
