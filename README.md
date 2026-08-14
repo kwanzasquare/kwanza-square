@@ -2,6 +2,10 @@
 
 *The African Strategy Game* — a playable digital version of Martin Assoumou's board.
 
+**Play it: https://steph6702.github.io/kwanza-square/**
+
+No sign-in, no install. Works on phones and desktop.
+
 A mystical African traditional game of wit and strategic thinking.
 Three concentric squares, 24 intersections, ten soldiers a side, and a sacred
 centre no one may hold.
@@ -22,7 +26,11 @@ build step, no package manager, no network access required.
 
 ### Sending it to someone
 
-`dist/kwanza-square.html` is the entire game — board, artwork, AI, all of it — in
+Send the link above — https://steph6702.github.io/kwanza-square/. It is served by
+GitHub Pages straight from `main`, so pushing a change updates the live game and
+the URL never changes.
+
+If you'd rather send a file than a link, `dist/kwanza-square.html` is the entire game — board, artwork, AI, all of it — in
 one 87 KB file with no external requests. Email it, drop it in a message, or put
 it on any web host. The recipient opens it and plays; nothing else is needed.
 
