@@ -449,6 +449,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   50%      { stroke-opacity: 1;  }
 }
 
+/* a trio that already took its prisoner — visible, but clearly not "score now" */
+.trio-standing { opacity: .3; pointer-events: none; }
+
 /* a scored trio glows along its straight line */
 .trio-glow {
   opacity: 0;

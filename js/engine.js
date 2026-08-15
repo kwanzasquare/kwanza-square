@@ -57,7 +57,8 @@
     state.lastMove = { A: null, B: null };
     state.movesMade = { A: 0, B: 0 };
     state.movesSinceCapture = 0;
-    state.activeTrios = [];
+    state.activeTrios = [];   // every trio standing on the board
+    state.scoredTrios = [];   // only the trio(s) formed by the move just played
     state.roundOver = false;
     state.roundWinner = null;
     state.roundReason = '';
@@ -85,6 +86,7 @@
       movesMade: { A: state.movesMade.A, B: state.movesMade.B },
       movesSinceCapture: state.movesSinceCapture,
       activeTrios: state.activeTrios.slice(),
+      scoredTrios: state.scoredTrios.slice(),
       roundOver: state.roundOver, roundWinner: state.roundWinner,
       roundReason: state.roundReason,
       log: state.log.slice()
@@ -219,6 +221,11 @@
     if (state.roundOver || state.matchOver) return events;
     var player = state.awaitingCapture || state.turn;
 
+    // A trio only "scores" at the moment it is formed. It then stays standing on
+    // the board, and a standing trio must not keep signalling a capture is due —
+    // that is what made an old trio look like a fresh one.
+    if (action.type !== 'capture') state.scoredTrios = [];
+
     if (action.type === 'place') {
       if (state.phase !== 'placement' || state.awaitingCapture) return events;
       if (state.board[action.node] !== null) return events;
@@ -254,9 +261,10 @@
       var formed = triosAt(state.board, action.to, player);
       if (formed.length && isFirstMove) {
         log(state, label(state, player) + ' lines up a trio, but a first move cannot score.');
-        events.push({ type: 'trio-void', trios: formed });
+        events.push({ type: 'trio-void', trios: formed, player: player });
       } else if (formed.length) {
         state.awaitingCapture = player;
+        state.scoredTrios = formed.map(function (i) { return { trio: i, player: player }; });
         log(state, label(state, player) + ' scores a trio — remove an enemy soldier.');
         events.push({ type: 'trio', trios: formed, player: player });
         refreshTrios(state);

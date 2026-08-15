@@ -111,6 +111,42 @@ console.log('\nMovement, trio and capture rules');
   check('turn passes after the capture', s.turn === 'B');
 }
 
+console.log('\nA standing trio must stop signalling once it has scored');
+{
+  // Martin's report: the AI had a trio on the board but took no prisoner. The
+  // capture logic was right; the board kept glowing after the trio had already
+  // scored, so an old trio looked like a fresh one.
+  const s = E.createMatch({ mode: 'local' });
+  s.phase = 'movement'; s.toPlace = { A: 0, B: 0 };
+  s.board = new Array(24).fill(null);
+  // Gold holds the middle ring's NW(8) and N(9); a third soldier sits on the
+  // middle E(11), one step around the ring from NE(10), which completes 8-9-10.
+  s.board[8] = 'A'; s.board[9] = 'A'; s.board[11] = 'A';
+  s.board[16] = 'B'; s.board[18] = 'B'; s.board[21] = 'B';
+  s.onBoard = { A: 3, B: 3 };
+  s.movesMade = { A: 1, B: 1 };
+  s.turn = 'A';
+
+  check('the completing step is legal', E.legalMovesFrom(s, 11).includes(10));
+  E.apply(s, { type: 'move', from: 11, to: 10 });
+  check('forming a trio marks it as scored', s.scoredTrios.length === 1, JSON.stringify(s.scoredTrios));
+  check('a capture is owed', s.awaitingCapture === 'A');
+
+  E.apply(s, { type: 'capture', node: 16 });
+  check('the trio still stands on the board', E.allTrios(s.board, 'A').length === 1);
+  check('but it is no longer flagged as scoring while the capture resolves',
+    s.scoredTrios.length === 1, 'kept through the capture step');
+
+  // B now plays an ordinary move; A's old trio must stop signalling
+  const bMoves = E.allMoves(s, 'B');
+  E.apply(s, { type: 'move', from: bMoves[0].from, to: bMoves[0].to });
+  check('after the next move the old trio no longer signals a score',
+    s.scoredTrios.length === 0, JSON.stringify(s.scoredTrios));
+  check('the old trio is still shown as standing',
+    s.activeTrios.some(t => t.player === 'A'), JSON.stringify(s.activeTrios));
+  check('and no phantom capture is owed', s.awaitingCapture === null);
+}
+
 console.log('\nBacktracking and first-move rules');
 {
   const s = E.createMatch({ mode: 'local' });

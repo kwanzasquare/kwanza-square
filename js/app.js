@@ -81,11 +81,11 @@
     return mover !== state.aiSide;
   }
 
-  function flash(text) {
+  function flash(text, ms) {
     var p = $('#prompt-text');
     p.textContent = text;
     clearTimeout(flashTimer);
-    flashTimer = setTimeout(render, 1400);
+    flashTimer = setTimeout(render, ms || 1400);
   }
 
   // --------------------------------------------------------------- view model
@@ -98,7 +98,8 @@
       capturable: new Set(),
       selected: selected,
       staged: staged ? (staged.type === 'move' ? staged.to : staged.node) : null,
-      trios: state.activeTrios,
+      trios: state.activeTrios,      // standing — drawn quietly
+      scored: state.scoredTrios,     // just formed — glows, a capture is due
       lastMove: state.lastMove[E.other(state.turn)] || null
     };
 
@@ -145,7 +146,9 @@
       if (ev.type === 'place') sfx.place();
       if (ev.type === 'move') sfx.move();
       if (ev.type === 'trio') sfx.trio();
-      if (ev.type === 'trio-void') flash('A first move cannot score.');
+      if (ev.type === 'trio-void') {
+        flash(playerName(ev.player) + ' lined up a trio — but a first move cannot score, so no soldier is taken.', 3200);
+      }
       if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
       if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
     });
@@ -320,6 +323,11 @@
       text.textContent = state.roundWinner
         ? playerName(state.roundWinner) + ' takes round ' + state.round + '.'
         : 'Round ' + state.round + ' is drawn.';
+    } else if (thinking && state.awaitingCapture) {
+      // say plainly what is happening, rather than a bare "Thinking…"
+      prompt.classList.add('capture');
+      tag.textContent = 'Capture';
+      text.textContent = 'Kwanza AI scored a trio — taking one of your soldiers.';
     } else if (thinking) {
       prompt.classList.add('thinking');
       tag.textContent = 'Kwanza AI';

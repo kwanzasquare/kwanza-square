@@ -644,6 +644,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   50%      { stroke-opacity: 1;  }
 }
 
+/* a trio that already took its prisoner — visible, but clearly not "score now" */
+.trio-standing { opacity: .3; pointer-events: none; }
+
 /* a scored trio glows along its straight line */
 .trio-glow {
   opacity: 0;
@@ -880,7 +883,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     state.lastMove = { A: null, B: null };
     state.movesMade = { A: 0, B: 0 };
     state.movesSinceCapture = 0;
-    state.activeTrios = [];
+    state.activeTrios = [];   // every trio standing on the board
+    state.scoredTrios = [];   // only the trio(s) formed by the move just played
     state.roundOver = false;
     state.roundWinner = null;
     state.roundReason = '';
@@ -908,6 +912,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       movesMade: { A: state.movesMade.A, B: state.movesMade.B },
       movesSinceCapture: state.movesSinceCapture,
       activeTrios: state.activeTrios.slice(),
+      scoredTrios: state.scoredTrios.slice(),
       roundOver: state.roundOver, roundWinner: state.roundWinner,
       roundReason: state.roundReason,
       log: state.log.slice()
@@ -1042,6 +1047,11 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     if (state.roundOver || state.matchOver) return events;
     var player = state.awaitingCapture || state.turn;
 
+    // A trio only "scores" at the moment it is formed. It then stays standing on
+    // the board, and a standing trio must not keep signalling a capture is due —
+    // that is what made an old trio look like a fresh one.
+    if (action.type !== 'capture') state.scoredTrios = [];
+
     if (action.type === 'place') {
       if (state.phase !== 'placement' || state.awaitingCapture) return events;
       if (state.board[action.node] !== null) return events;
@@ -1077,9 +1087,10 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       var formed = triosAt(state.board, action.to, player);
       if (formed.length && isFirstMove) {
         log(state, label(state, player) + ' lines up a trio, but a first move cannot score.');
-        events.push({ type: 'trio-void', trios: formed });
+        events.push({ type: 'trio-void', trios: formed, player: player });
       } else if (formed.length) {
         state.awaitingCapture = player;
+        state.scoredTrios = formed.map(function (i) { return { trio: i, player: player }; });
         log(state, label(state, player) + ' scores a trio — remove an enemy soldier.');
         events.push({ type: 'trio', trios: formed, player: player });
         refreshTrios(state);
@@ -1768,9 +1779,10 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     var forbidden = vm.forbidden || new Set();
     var capturable = vm.capturable || new Set();
 
-    // which soldiers are standing in a scored trio
+    // Rings go only on a trio that has JUST scored — a standing trio that already
+    // took its prisoner must not keep signalling that a capture is due.
     var inTrio = {};
-    (vm.trios || []).forEach(function (entry) {
+    (vm.scored || []).forEach(function (entry) {
       G.trios[entry.trio].forEach(function (n) { inTrio[n] = entry.player; });
     });
 
@@ -1808,7 +1820,25 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
     var layer = view.trioLayer;
     while (layer.firstChild) layer.removeChild(layer.firstChild);
+
+    var scoredKeys = {};
+    (vm.scored || []).forEach(function (e) { scoredKeys[e.trio] = true; });
+
+    // standing trios: a thin quiet line, so the formation is still readable
     (vm.trios || []).forEach(function (entry) {
+      if (scoredKeys[entry.trio]) return;
+      var t = G.trios[entry.trio];
+      var a = G.node(t[0]), c = G.node(t[2]);
+      el('line', {
+        class: 'trio-standing',
+        x1: a.x, y1: a.y, x2: c.x, y2: c.y,
+        stroke: SOLDIERS[view.soldier[entry.player]].glow,
+        'stroke-width': 5, 'stroke-linecap': 'round'
+      }, layer);
+    });
+
+    // the trio just scored: bright and breathing, a capture is owed
+    (vm.scored || []).forEach(function (entry) {
       var t = G.trios[entry.trio];
       var a = G.node(t[0]), c = G.node(t[2]);
       el('line', {
@@ -1958,11 +1988,11 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return mover !== state.aiSide;
   }
 
-  function flash(text) {
+  function flash(text, ms) {
     var p = $('#prompt-text');
     p.textContent = text;
     clearTimeout(flashTimer);
-    flashTimer = setTimeout(render, 1400);
+    flashTimer = setTimeout(render, ms || 1400);
   }
 
   // --------------------------------------------------------------- view model
@@ -1975,7 +2005,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       capturable: new Set(),
       selected: selected,
       staged: staged ? (staged.type === 'move' ? staged.to : staged.node) : null,
-      trios: state.activeTrios,
+      trios: state.activeTrios,      // standing — drawn quietly
+      scored: state.scoredTrios,     // just formed — glows, a capture is due
       lastMove: state.lastMove[E.other(state.turn)] || null
     };
 
@@ -2022,7 +2053,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       if (ev.type === 'place') sfx.place();
       if (ev.type === 'move') sfx.move();
       if (ev.type === 'trio') sfx.trio();
-      if (ev.type === 'trio-void') flash('A first move cannot score.');
+      if (ev.type === 'trio-void') {
+        flash(playerName(ev.player) + ' lined up a trio — but a first move cannot score, so no soldier is taken.', 3200);
+      }
       if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
       if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
     });
@@ -2197,6 +2230,11 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       text.textContent = state.roundWinner
         ? playerName(state.roundWinner) + ' takes round ' + state.round + '.'
         : 'Round ' + state.round + ' is drawn.';
+    } else if (thinking && state.awaitingCapture) {
+      // say plainly what is happening, rather than a bare "Thinking…"
+      prompt.classList.add('capture');
+      tag.textContent = 'Capture';
+      text.textContent = 'Kwanza AI scored a trio — taking one of your soldiers.';
     } else if (thinking) {
       prompt.classList.add('thinking');
       tag.textContent = 'Kwanza AI';

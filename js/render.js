@@ -418,9 +418,10 @@
     var forbidden = vm.forbidden || new Set();
     var capturable = vm.capturable || new Set();
 
-    // which soldiers are standing in a scored trio
+    // Rings go only on a trio that has JUST scored — a standing trio that already
+    // took its prisoner must not keep signalling that a capture is due.
     var inTrio = {};
-    (vm.trios || []).forEach(function (entry) {
+    (vm.scored || []).forEach(function (entry) {
       G.trios[entry.trio].forEach(function (n) { inTrio[n] = entry.player; });
     });
 
@@ -458,7 +459,25 @@
 
     var layer = view.trioLayer;
     while (layer.firstChild) layer.removeChild(layer.firstChild);
+
+    var scoredKeys = {};
+    (vm.scored || []).forEach(function (e) { scoredKeys[e.trio] = true; });
+
+    // standing trios: a thin quiet line, so the formation is still readable
     (vm.trios || []).forEach(function (entry) {
+      if (scoredKeys[entry.trio]) return;
+      var t = G.trios[entry.trio];
+      var a = G.node(t[0]), c = G.node(t[2]);
+      el('line', {
+        class: 'trio-standing',
+        x1: a.x, y1: a.y, x2: c.x, y2: c.y,
+        stroke: SOLDIERS[view.soldier[entry.player]].glow,
+        'stroke-width': 5, 'stroke-linecap': 'round'
+      }, layer);
+    });
+
+    // the trio just scored: bright and breathing, a capture is owed
+    (vm.scored || []).forEach(function (entry) {
       var t = G.trios[entry.trio];
       var a = G.node(t[0]), c = G.node(t[2]);
       el('line', {
