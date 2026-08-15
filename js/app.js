@@ -18,13 +18,14 @@
     difficulty: 'normal',
     mode: 'ai',
     opponent: 'jade',    // colourway for the second side; gold is fixed
-    pawns: 10            // Martin's ruling; adjustable only to test the feel
+    pawns: 9,            // Martin's revised ruling
+    v: 2                 // settings version, for one-time migrations
   };
 
   var PAWNS_HINT = {
-    10: '10 is the traditional count. It leaves only 4 free intersections, so rounds are almost always decided by trapping rather than by capturing.',
-    9: '9 leaves 6 free intersections. Rounds run roughly half again as long and trios start deciding games instead of just decorating them.',
-    8: '8 leaves 8 free intersections — the most open game, closest to how the board plays with room to manoeuvre.'
+    10: '10 leaves only 4 free intersections, so rounds are nearly always decided by trapping rather than by capturing. This was the original count.',
+    9: '9 is the standard game. Six free intersections give the board room to breathe, and trios decide rounds instead of just decorating them.',
+    8: '8 leaves 8 free intersections — the most open game, with the most room to manoeuvre.'
   };
 
   // ------------------------------------------------------------------ helpers
@@ -35,7 +36,16 @@
   function loadSettings() {
     try {
       var raw = localStorage.getItem('kwanza-settings');
-      if (raw) Object.assign(settings, JSON.parse(raw));
+      if (raw) {
+        var saved = JSON.parse(raw);
+        Object.assign(settings, saved);
+        // The soldier count changed from 10 to 9. Anyone carrying the old
+        // default should get the new one; a deliberate 8 is left alone.
+        if (saved.v !== 2) {
+          if (!saved.pawns || saved.pawns === 10) settings.pawns = 9;
+          settings.v = 2;
+        }
+      }
       // saved settings from before the colour picker existed have no opponent
       if (!R.SOLDIERS[settings.opponent]) settings.opponent = 'jade';
     } catch (e) { /* private mode — defaults are fine */ }
@@ -146,9 +156,6 @@
       if (ev.type === 'place') sfx.place();
       if (ev.type === 'move') sfx.move();
       if (ev.type === 'trio') sfx.trio();
-      if (ev.type === 'trio-void') {
-        flash(playerName(ev.player) + ' lined up a trio — but a first move cannot score, so no soldier is taken.', 3200);
-      }
       if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
       if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
     });
@@ -395,8 +402,9 @@
     );
   }
 
-  var RULES_HTML =
-    '<div class="modal-body">' +
+  function rulesHtml() {
+    var n = settings.pawns;
+    return '<div class="modal-body">' +
     '<h3>The board</h3><ul>' +
     '<li>Three concentric squares — Territory, Strategy, Mastery.</li>' +
     '<li>24 playable intersections, eight on each square.</li>' +
@@ -404,7 +412,7 @@
     '<li>The centre is sacred and can never be played.</li>' +
     '</ul>' +
     '<h3>Phase 1 — placement</h3><ul>' +
-    '<li>Each side has 10 soldiers, placed one at a time.</li>' +
+    '<li>Each side has ' + n + ' soldiers, placed one at a time.</li>' +
     '<li>One soldier per intersection.</li>' +
     '<li>A placement that would complete a trio is not allowed — choose another intersection.</li>' +
     '<li>Nothing scores in this phase.</li>' +
@@ -413,7 +421,6 @@
     '<li>Move one step along a line to an adjacent free intersection.</li>' +
     '<li>Vertical and horizontal only. Never diagonal, never skipping.</li>' +
     '<li>You may not immediately move back where you came from.</li>' +
-    '<li>Your first move of the phase cannot score.</li>' +
     '</ul>' +
     '<h3>Scoring and capture</h3><ul>' +
     '<li>Three of your soldiers in a straight line is a trio. Diagonals never count.</li>' +
@@ -423,9 +430,10 @@
     '<li>A round ends when a side has no soldiers left, or cannot move.</li>' +
     '<li>The match is best of three.</li>' +
     '</ul></div>';
+  }
 
   function showRules() {
-    openModal('<h2>Rules of Kwanza Square</h2>' + RULES_HTML,
+    openModal('<h2>Rules of Kwanza Square</h2>' + rulesHtml(),
       [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]);
   }
 
@@ -478,7 +486,7 @@
     },
     {
       title: 'Phase 1 — placement',
-      text: 'Each side places 10 soldiers, one at a time, one per intersection. A placement that would complete a trio is refused — you must choose somewhere else. Nothing scores during placement.',
+      text: 'Each side places {n} soldiers, one at a time, one per intersection. A placement that would complete a trio is refused — you must choose somewhere else. Nothing scores during placement.',
       vm: function () {
         var b = new Array(24).fill(null);
         b[0] = 'A'; b[1] = 'A'; b[8] = 'B'; b[3] = 'B'; b[16] = 'B'; b[5] = 'A';
@@ -487,7 +495,7 @@
     },
     {
       title: 'Phase 2 — movement',
-      text: 'Once all 20 soldiers are down, you move one step along a line to an adjacent free point. Vertical and horizontal only — never diagonal, never skipping — and you may not immediately step back where you came from.',
+      text: 'Once all {n2} soldiers are down, you move one step along a line to an adjacent free point. Vertical and horizontal only — never diagonal, never skipping — and you may not immediately step back where you came from.',
       vm: function () {
         var b = new Array(24).fill(null);
         b[3] = 'A'; b[8] = 'B'; b[5] = 'B'; b[16] = 'A';
@@ -527,7 +535,9 @@
     vm.board = vm.board || new Array(24).fill(null);
     R.update(tutorialView, vm);
     $('#tutorial-title').textContent = step.title;
-    $('#tutorial-text').textContent = step.text;
+    $('#tutorial-text').textContent = step.text
+      .replace(/\{n\}/g, settings.pawns)
+      .replace(/\{n2\}/g, settings.pawns * 2);
     $('#tutorial-prev').disabled = tutorialIndex === 0;
     $('#tutorial-next').textContent = tutorialIndex === tutorialSteps.length - 1 ? 'Finish' : 'Next';
     var dots = $('#tutorial-dots');

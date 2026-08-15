@@ -9,8 +9,9 @@
  *     complete a trio is ILLEGAL — the player must choose another intersection.
  *     Nothing scores in Phase 1.
  *   - Phase 2 movement: vertical/horizontal to an ADJACENT FREE intersection.
- *     No diagonals, no skipping, no immediate back-and-forth. A player's first
- *     move of Phase 2 cannot score.
+ *     No diagonals, no skipping, no immediate back-and-forth. Every move can
+ *     score, including the first (the old "first move cannot score" rule was
+ *     dropped on Martin's instruction — it confused far more than it added).
  *   - A trio (3 in a straight line, never diagonal) grants the right to remove
  *     ANY one enemy pawn, including one standing inside a trio.
  *   - Round ends when a side has no pawns left, or cannot move. Best of three.
@@ -19,7 +20,7 @@
   'use strict';
 
   var G = KZ.Geometry;
-  var PAWNS_PER_SIDE = 10;
+  var PAWNS_PER_SIDE = 9;   // Martin's revised ruling: 9 leaves the board room to breathe
   var ROUNDS_TO_WIN = 2;
   var DRAW_LIMIT = 100; // moves without a capture -> round declared a draw
 
@@ -32,8 +33,6 @@
       aiSide: opts.aiSide || 'B',
       difficulty: opts.difficulty || 'normal',
       names: opts.names || { A: 'Gold', B: 'Black' },
-      // 10 a side is the traditional count and the default. Configurable only
-      // so the effect of a smaller count can be tested on a real board.
       pawnsPerSide: opts.pawns || PAWNS_PER_SIDE,
       round: 1,
       scores: { A: 0, B: 0 },
@@ -237,7 +236,7 @@
 
       if (state.toPlace.A === 0 && state.toPlace.B === 0) {
         state.phase = 'movement';
-        log(state, 'All 20 soldiers placed — the movement phase begins.');
+        log(state, 'All ' + (state.pawnsPerSide * 2) + ' soldiers placed — the movement phase begins.');
         events.push({ type: 'phase', phase: 'movement' });
       }
       endTurn(state, events);
@@ -255,14 +254,10 @@
       state.movesSinceCapture++;
       events.push({ type: 'move', from: action.from, to: action.to, player: player });
 
-      var isFirstMove = state.movesMade[player] === 0;
       state.movesMade[player]++;
 
       var formed = triosAt(state.board, action.to, player);
-      if (formed.length && isFirstMove) {
-        log(state, label(state, player) + ' lines up a trio, but a first move cannot score.');
-        events.push({ type: 'trio-void', trios: formed, player: player });
-      } else if (formed.length) {
+      if (formed.length) {
         state.awaitingCapture = player;
         state.scoredTrios = formed.map(function (i) { return { trio: i, player: player }; });
         log(state, label(state, player) + ' scores a trio — remove an enemy soldier.');

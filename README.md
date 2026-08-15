@@ -7,7 +7,7 @@
 No sign-in, no install. Works on phones and desktop.
 
 A mystical African traditional game of wit and strategic thinking.
-Three concentric squares, 24 intersections, ten soldiers a side, and a sacred
+Three concentric squares, 24 intersections, nine soldiers a side, and a sacred
 centre no one may hold.
 
 ---
@@ -100,16 +100,21 @@ Mastery (inner) — eight intersections each, 24 in total. Four radial connector
 join the squares at north, east, south and west. The centre is sacred and never
 playable.
 
-**Phase 1, placement.** Ten soldiers a side, placed one at a time, one per
+**Phase 1, placement.** Nine soldiers a side, placed one at a time, one per
 intersection. A placement that would complete a trio is refused — the app marks
 those intersections with a red ✕ and asks you to choose another. Nothing scores
-during placement, so all 20 soldiers are on the board when it ends, leaving four
+during placement, so all 18 soldiers are on the board when it ends, leaving six
 free intersections.
+
+The count is adjustable (10, 9 or 8) on the start screen. It began at 10, which
+left only four free intersections and made rounds end by trapping rather than by
+capturing — in testing, 14 of 14 rounds at 10 a side ended that way and none by
+capture. Nine is now the standard game.
 
 **Phase 2, movement.** One step along a line to an adjacent free intersection.
 Vertical and horizontal only, never diagonal, never skipping. You may not
-immediately move back where you came from. Your first move of the phase cannot
-score.
+immediately move back where you came from. Every move can score, including the
+first.
 
 **Scoring.** Three soldiers in a straight line is a trio — along any square's
 edge, or straight down a radial connector. Diagonals never count. There are

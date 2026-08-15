@@ -54,7 +54,7 @@ check('4 radial connectors join the rings', G.segments.filter(s =>
 console.log('\nPlacement phase');
 {
   const s = E.createMatch({ mode: 'local' });
-  check('10 pawns per side', s.toPlace.A === 10 && s.toPlace.B === 10);
+  check('9 pawns per side', s.toPlace.A === 9 && s.toPlace.B === 9);
   check('board starts empty', s.board.every(v => v === null));
 
   // Drive a full placement phase, asserting the no-trio rule the whole way.
@@ -68,8 +68,8 @@ console.log('\nPlacement phase');
   }
   check('placement completes', s.phase === 'movement', 'phase=' + s.phase);
   check('no trio was ever formed during placement', !trioDuringPlacement);
-  check('all 20 soldiers are on the board', s.onBoard.A === 10 && s.onBoard.B === 10);
-  check('exactly 4 free intersections remain', s.board.filter(v => v === null).length === 4);
+  check('all 18 soldiers are on the board', s.onBoard.A === 9 && s.onBoard.B === 9);
+  check('exactly 6 free intersections remain', s.board.filter(v => v === null).length === 6);
   check('nobody scored in phase 1', s.awaitingCapture === null);
   check('both sides can move at the start of phase 2',
     E.allMoves(s, 'A').length > 0 && E.allMoves(s, 'B').length > 0,
@@ -88,7 +88,7 @@ console.log('\nMovement, trio and capture rules');
   s.board[3] = 'A';                              // E, will move to NE
   s.board[8] = 'B'; s.board[9] = 'B'; s.board[10] = 'B';
   s.onBoard = { A: 3, B: 3 };
-  s.movesMade = { A: 1, B: 1 };                  // past the "first move cannot score" rule
+  s.movesMade = { A: 1, B: 1 };
   s.turn = 'A';
 
   check('diagonal is not adjacent', !G.adjacency[0].includes(2));
@@ -147,7 +147,7 @@ console.log('\nA standing trio must stop signalling once it has scored');
   check('and no phantom capture is owed', s.awaitingCapture === null);
 }
 
-console.log('\nBacktracking and first-move rules');
+console.log('\nBacktracking, and scoring on the first move');
 {
   const s = E.createMatch({ mode: 'local' });
   s.phase = 'movement'; s.toPlace = { A: 0, B: 0 };
@@ -170,7 +170,9 @@ console.log('\nBacktracking and first-move rules');
   s.movesMade = { A: 0, B: 0 };
   s.turn = 'A';
   const ev = E.apply(s, { type: 'move', from: 3, to: 2 });
-  check('a first move cannot score', ev.some(e => e.type === 'trio-void') && s.awaitingCapture === null);
+  // The "first move cannot score" rule was dropped on Martin's instruction.
+  check('a first move CAN score', ev.some(e => e.type === 'trio') && s.awaitingCapture === 'A');
+  check('no trio is ever voided any more', !ev.some(e => e.type === 'trio-void'));
 }
 
 console.log('\nFull self-play games (rules never deadlock)');
@@ -339,7 +341,7 @@ console.log('\nHow much room the board has, by pawn count');
   const s10 = E.createMatch({ pawns: 10 });
   const s8 = E.createMatch({ pawns: 8 });
   check('pawn count is configurable', s10.toPlace.A === 10 && s8.toPlace.A === 8);
-  check('default stays at Martin\'s ruling of 10', E.createMatch({}).toPlace.A === 10);
+  check('default is now 9', E.createMatch({}).toPlace.A === 9);
 }
 
 // Soldier colourways live in render.js, which needs a DOM — they are verified
