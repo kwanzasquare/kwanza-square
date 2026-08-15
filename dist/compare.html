@@ -1,0 +1,59 @@
+<meta charset="utf-8">
+<title>Kwanza Square — soldier colour comparison</title>
+<!-- Required: the overlay rings (halo, select, capture, forbidden) are hidden
+     by the stylesheet. Without it they all paint over the board. -->
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+  body {
+    margin: 0; padding: 28px;
+    background: #0A0A0A; color: #F7F3E9;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: .01em; }
+  p.sub { margin: 0 0 22px; font-size: 13px; color: rgba(247,243,233,.6); }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  figure { margin: 0; }
+  figure svg { display: block; width: 100%; height: auto; border-radius: 10px; }
+  figcaption {
+    margin-top: 9px; text-align: center;
+    font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .note { margin-top: 20px; font-size: 12.5px; color: rgba(247,243,233,.5); }
+  /* the side mottos are unreadable at thumbnail size */
+  .board-motto { display: none; }
+</style>
+
+<h1>Kwanza Square — which colour for the second side?</h1>
+<p class="sub">The same position, on the real board. Gold is fixed; these are the five candidates for the opponent.</p>
+
+<div class="grid" id="grid"></div>
+<p class="note">Onyx is the original near-black. Against the black motif tiles it is hard to read at a glance — which is the problem being solved here.</p>
+
+<script src="../js/geometry.js"></script>
+<script src="../js/render.js"></script>
+<script>
+  var R = window.KZ.Render;
+  // A representative mid-game position: both sides developed, one gold trio
+  // scored on the middle ring so the trio glow shows too.
+  var board = new Array(24).fill(null);
+  [8, 9, 10, 1, 4, 17, 21].forEach(function (i) { board[i] = 'A'; });
+  [0, 2, 12, 14, 16, 19, 23].forEach(function (i) { board[i] = 'B'; });
+  var trioIndex = window.KZ.Geometry.trios.findIndex(function (t) {
+    return t[0] === 8 && t[1] === 9 && t[2] === 10;
+  });
+
+  ['silver', 'jade', 'crimson', 'ivory', 'onyx'].forEach(function (key) {
+    var fig = document.createElement('figure');
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    fig.appendChild(svg);
+    var cap = document.createElement('figcaption');
+    cap.textContent = R.SOLDIERS[key].label;
+    cap.style.color = R.SOLDIERS[key].mid;
+    fig.appendChild(cap);
+    document.getElementById('grid').appendChild(fig);
+
+    var view = R.build(svg, null);
+    R.setSoldiers(view, { A: 'gold', B: key });
+    R.update(view, { board: board, trios: [{ trio: trioIndex, player: 'A' }] });
+  });
+</script>

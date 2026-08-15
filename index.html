@@ -58,12 +58,39 @@
 
       <div class="panel" id="difficulty-block">
         <h2>AI strength</h2>
-        <p class="hint">Hard looks four moves ahead, blocks your trios and avoids traps.</p>
         <div class="seg">
-          <button class="btn btn-sm" data-difficulty="easy">Easy</button>
-          <button class="btn btn-sm" data-difficulty="normal">Normal</button>
-          <button class="btn btn-sm" data-difficulty="hard">Hard</button>
+          <button class="btn btn-sm" data-difficulty="easy">Beginner</button>
+          <button class="btn btn-sm" data-difficulty="normal">Skilled</button>
+          <button class="btn btn-sm" data-difficulty="hard">Master</button>
         </div>
+        <p class="hint" id="difficulty-hint"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Soldiers</h2>
+        <p class="hint">Gold is yours. Choose the colour for the other side — the strip below shows both on the board's own blue and black.</p>
+        <div class="swatch-preview">
+          <span class="prev-tile"><span class="prev-pawn" id="prev-gold"></span></span>
+          <span class="prev-line"></span>
+          <span class="prev-tile"><span class="prev-pawn" id="prev-opp"></span></span>
+        </div>
+        <div class="swatch-row">
+          <button class="swatch" data-opponent="silver"><span class="dot"></span>Silver</button>
+          <button class="swatch" data-opponent="jade"><span class="dot"></span>Jade</button>
+          <button class="swatch" data-opponent="crimson"><span class="dot"></span>Crimson</button>
+          <button class="swatch" data-opponent="ivory"><span class="dot"></span>Ivory</button>
+          <button class="swatch" data-opponent="onyx"><span class="dot"></span>Onyx</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Soldiers per side</h2>
+        <div class="seg">
+          <button class="btn btn-sm" data-pawns="10">10</button>
+          <button class="btn btn-sm" data-pawns="9">9</button>
+          <button class="btn btn-sm" data-pawns="8">8</button>
+        </div>
+        <p class="hint" id="pawns-hint"></p>
       </div>
 
       <div class="panel">
@@ -103,7 +130,7 @@
   <section class="screen" id="screen-game">
     <header class="topbar">
       <div class="score-side" id="side-a">
-        <span class="chip-pawn gold"></span>
+        <span class="chip-pawn" id="chip-a"></span>
         <span class="score-meta">
           <span class="score-name" id="name-a">Gold</span>
           <span class="score-pawns" id="pawns-a"></span>
@@ -114,7 +141,7 @@
         <div class="score-value" id="score-value">0 – 0</div>
       </div>
       <div class="score-side right" id="side-b">
-        <span class="chip-pawn black"></span>
+        <span class="chip-pawn" id="chip-b"></span>
         <span class="score-meta">
           <span class="score-name" id="name-b">Black</span>
           <span class="score-pawns" id="pawns-b"></span>

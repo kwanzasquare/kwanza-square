@@ -188,6 +188,54 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .option .opt-desc { font-size: 12px; color: rgba(247,243,233,.55); margin-top: 2px; }
 .option .opt-icon { font-size: 20px; width: 26px; text-align: center; }
 
+/* soldier colour picker ---------------------------------------------------- */
+
+.swatch-preview {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  background: radial-gradient(120% 120% at 50% 30%, var(--board-blue), var(--board-blue-deep));
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.prev-tile {
+  width: 58px; height: 58px; border-radius: 5px;
+  background: var(--board-black);
+  border: 2px solid var(--board-white);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.prev-line { width: 46px; height: 7px; background: var(--board-orange); flex: 0 0 auto; }
+.prev-pawn {
+  width: 46px; height: 46px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+  transition: background .2s ease;
+}
+
+.swatch-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--ui-font); font-weight: 700; font-size: 12.5px;
+  min-height: 38px; padding: 7px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(247,243,233,.14);
+  background: rgba(247,243,233,.04);
+  color: var(--ivory);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .12s ease;
+}
+.swatch:active { transform: scale(.97); }
+.swatch .dot {
+  width: 17px; height: 17px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4);
+  flex: 0 0 auto;
+}
+.swatch[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: rgba(212,160,23,.14);
+  color: var(--gold-lift);
+}
+
 .seg { display: flex; gap: 8px; }
 .seg .btn { flex: 1; }
 .seg .btn[aria-pressed="true"] {
@@ -230,8 +278,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   border: 2px solid rgba(255,255,255,.75);
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
-.chip-pawn.gold { background: radial-gradient(circle at 35% 30%, #ffd977, var(--gold) 62%, #8a6408); }
-.chip-pawn.black { background: radial-gradient(circle at 35% 30%, #5c5c5c, #141414 60%, #000); }
+/* chip backgrounds are set from the chosen colourway at runtime */
 
 .score-meta { min-width: 0; }
 .score-name {

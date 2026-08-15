@@ -32,6 +32,9 @@
       aiSide: opts.aiSide || 'B',
       difficulty: opts.difficulty || 'normal',
       names: opts.names || { A: 'Gold', B: 'Black' },
+      // 10 a side is the traditional count and the default. Configurable only
+      // so the effect of a smaller count can be tested on a real board.
+      pawnsPerSide: opts.pawns || PAWNS_PER_SIDE,
       round: 1,
       scores: { A: 0, B: 0 },
       roundHistory: [],
@@ -47,7 +50,8 @@
     state.phase = 'placement';
     state.board = new Array(G.NODE_COUNT).fill(null);
     state.turn = state.startingPlayer;
-    state.toPlace = { A: PAWNS_PER_SIDE, B: PAWNS_PER_SIDE };
+    var n = state.pawnsPerSide || PAWNS_PER_SIDE;
+    state.toPlace = { A: n, B: n };
     state.onBoard = { A: 0, B: 0 };
     state.awaitingCapture = null;
     state.lastMove = { A: null, B: null };
@@ -63,7 +67,7 @@
   function clone(state) {
     return {
       mode: state.mode, aiSide: state.aiSide, difficulty: state.difficulty,
-      names: state.names, round: state.round,
+      names: state.names, pawnsPerSide: state.pawnsPerSide, round: state.round,
       scores: { A: state.scores.A, B: state.scores.B },
       roundHistory: state.roundHistory.slice(),
       matchOver: state.matchOver, matchWinner: state.matchWinner,

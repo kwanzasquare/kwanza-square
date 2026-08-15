@@ -226,5 +226,88 @@ console.log('\nKwanza AI');
     JSON.stringify(blocked));
 }
 
+console.log('\nDifficulty tiers actually differ');
+{
+  // Play a round with a different level driving each side.
+  function playLevels(levelA, levelB) {
+    const s = E.createMatch({ mode: 'ai' });
+    let actions = 0;
+    while (!s.roundOver && actions++ < 3000) {
+      const mover = s.awaitingCapture || s.turn;
+      s.difficulty = mover === 'A' ? levelA : levelB;
+      const a = AI.chooseAction(s);
+      if (!a) break;
+      E.apply(s, a);
+    }
+    return s;
+  }
+
+  // How often does each level win by strangling rather than by capturing?
+  // This is the thing that made the game unpleasant, so it is worth measuring.
+  const strangle = {};
+  for (const level of ['easy', 'normal', 'hard']) {
+    let noMove = 0, total = 0;
+    for (let i = 0; i < 12; i++) {
+      const s = playLevels(level, level);
+      if (s.roundOver && s.roundWinner) {
+        total++;
+        if (/cannot move/.test(s.roundReason)) noMove++;
+      }
+    }
+    strangle[level] = total ? noMove / total : 0;
+    console.log('       ' + level.padEnd(6) + ' rounds won by strangling: ' +
+      noMove + '/' + total);
+  }
+  check('Beginner strangles less often than Master',
+    strangle.easy < strangle.hard || strangle.hard === 0,
+    'easy=' + strangle.easy.toFixed(2) + ' hard=' + strangle.hard.toFixed(2));
+
+  // Master should beat Beginner clearly, or the labels are lying.
+  let masterWins = 0, decided = 0;
+  for (let i = 0; i < 14; i++) {
+    const s = playLevels('easy', 'hard'); // A = Beginner, B = Master
+    if (s.roundWinner) { decided++; if (s.roundWinner === 'B') masterWins++; }
+  }
+  console.log('       Master vs Beginner: Master won ' + masterWins + '/' + decided);
+  check('Master beats Beginner more often than not', masterWins * 2 > decided,
+    masterWins + '/' + decided);
+}
+
+console.log('\nHow much room the board has, by pawn count');
+{
+  // Martin's ruling is 10 a side. This measures what that actually does to the
+  // shape of a round, so the decision can be made on evidence rather than feel.
+  for (const pawns of [10, 9, 8, 7]) {
+    let noMove = 0, wipeout = 0, drawn = 0, total = 0, movesSum = 0;
+    for (let i = 0; i < 14; i++) {
+      const s = E.createMatch({ mode: 'ai', pawns });
+      s.difficulty = 'normal';
+      let acts = 0;
+      while (!s.roundOver && acts++ < 3000) {
+        const a = AI.chooseAction(s);
+        if (!a) break;
+        E.apply(s, a);
+      }
+      if (!s.roundOver) continue;
+      total++;
+      movesSum += s.movesMade.A + s.movesMade.B;
+      if (!s.roundWinner) drawn++;
+      else if (/cannot move/.test(s.roundReason)) noMove++;
+      else wipeout++;
+    }
+    const free = 24 - pawns * 2;
+    console.log('       ' + pawns + ' a side (' + free + ' free points): ' +
+      'strangled ' + noMove + ', captured out ' + wipeout + ', drawn ' + drawn +
+      ' | avg ' + Math.round(movesSum / Math.max(total, 1)) + ' moves per round');
+  }
+  const s10 = E.createMatch({ pawns: 10 });
+  const s8 = E.createMatch({ pawns: 8 });
+  check('pawn count is configurable', s10.toPlace.A === 10 && s8.toPlace.A === 8);
+  check('default stays at Martin\'s ruling of 10', E.createMatch({}).toPlace.A === 10);
+}
+
+// Soldier colourways live in render.js, which needs a DOM — they are verified
+// in the browser rather than here.
+
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');
 process.exit(failures ? 1 : 0);

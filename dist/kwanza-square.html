@@ -61,12 +61,39 @@
 
       <div class="panel" id="difficulty-block">
         <h2>AI strength</h2>
-        <p class="hint">Hard looks four moves ahead, blocks your trios and avoids traps.</p>
         <div class="seg">
-          <button class="btn btn-sm" data-difficulty="easy">Easy</button>
-          <button class="btn btn-sm" data-difficulty="normal">Normal</button>
-          <button class="btn btn-sm" data-difficulty="hard">Hard</button>
+          <button class="btn btn-sm" data-difficulty="easy">Beginner</button>
+          <button class="btn btn-sm" data-difficulty="normal">Skilled</button>
+          <button class="btn btn-sm" data-difficulty="hard">Master</button>
         </div>
+        <p class="hint" id="difficulty-hint"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Soldiers</h2>
+        <p class="hint">Gold is yours. Choose the colour for the other side — the strip below shows both on the board's own blue and black.</p>
+        <div class="swatch-preview">
+          <span class="prev-tile"><span class="prev-pawn" id="prev-gold"></span></span>
+          <span class="prev-line"></span>
+          <span class="prev-tile"><span class="prev-pawn" id="prev-opp"></span></span>
+        </div>
+        <div class="swatch-row">
+          <button class="swatch" data-opponent="silver"><span class="dot"></span>Silver</button>
+          <button class="swatch" data-opponent="jade"><span class="dot"></span>Jade</button>
+          <button class="swatch" data-opponent="crimson"><span class="dot"></span>Crimson</button>
+          <button class="swatch" data-opponent="ivory"><span class="dot"></span>Ivory</button>
+          <button class="swatch" data-opponent="onyx"><span class="dot"></span>Onyx</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Soldiers per side</h2>
+        <div class="seg">
+          <button class="btn btn-sm" data-pawns="10">10</button>
+          <button class="btn btn-sm" data-pawns="9">9</button>
+          <button class="btn btn-sm" data-pawns="8">8</button>
+        </div>
+        <p class="hint" id="pawns-hint"></p>
       </div>
 
       <div class="panel">
@@ -106,7 +133,7 @@
   <section class="screen" id="screen-game">
     <header class="topbar">
       <div class="score-side" id="side-a">
-        <span class="chip-pawn gold"></span>
+        <span class="chip-pawn" id="chip-a"></span>
         <span class="score-meta">
           <span class="score-name" id="name-a">Gold</span>
           <span class="score-pawns" id="pawns-a"></span>
@@ -117,7 +144,7 @@
         <div class="score-value" id="score-value">0 – 0</div>
       </div>
       <div class="score-side right" id="side-b">
-        <span class="chip-pawn black"></span>
+        <span class="chip-pawn" id="chip-b"></span>
         <span class="score-meta">
           <span class="score-name" id="name-b">Black</span>
           <span class="score-pawns" id="pawns-b"></span>
@@ -365,6 +392,54 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .option .opt-desc { font-size: 12px; color: rgba(247,243,233,.55); margin-top: 2px; }
 .option .opt-icon { font-size: 20px; width: 26px; text-align: center; }
 
+/* soldier colour picker ---------------------------------------------------- */
+
+.swatch-preview {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  background: radial-gradient(120% 120% at 50% 30%, var(--board-blue), var(--board-blue-deep));
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.prev-tile {
+  width: 58px; height: 58px; border-radius: 5px;
+  background: var(--board-black);
+  border: 2px solid var(--board-white);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.prev-line { width: 46px; height: 7px; background: var(--board-orange); flex: 0 0 auto; }
+.prev-pawn {
+  width: 46px; height: 46px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+  transition: background .2s ease;
+}
+
+.swatch-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--ui-font); font-weight: 700; font-size: 12.5px;
+  min-height: 38px; padding: 7px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(247,243,233,.14);
+  background: rgba(247,243,233,.04);
+  color: var(--ivory);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .12s ease;
+}
+.swatch:active { transform: scale(.97); }
+.swatch .dot {
+  width: 17px; height: 17px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4);
+  flex: 0 0 auto;
+}
+.swatch[aria-pressed="true"] {
+  border-color: var(--gold);
+  background: rgba(212,160,23,.14);
+  color: var(--gold-lift);
+}
+
 .seg { display: flex; gap: 8px; }
 .seg .btn { flex: 1; }
 .seg .btn[aria-pressed="true"] {
@@ -407,8 +482,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   border: 2px solid rgba(255,255,255,.75);
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
-.chip-pawn.gold { background: radial-gradient(circle at 35% 30%, #ffd977, var(--gold) 62%, #8a6408); }
-.chip-pawn.black { background: radial-gradient(circle at 35% 30%, #5c5c5c, #141414 60%, #000); }
+/* chip backgrounds are set from the chosen colourway at runtime */
 
 .score-meta { min-width: 0; }
 .score-name {
@@ -790,6 +864,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       aiSide: opts.aiSide || 'B',
       difficulty: opts.difficulty || 'normal',
       names: opts.names || { A: 'Gold', B: 'Black' },
+      // 10 a side is the traditional count and the default. Configurable only
+      // so the effect of a smaller count can be tested on a real board.
+      pawnsPerSide: opts.pawns || PAWNS_PER_SIDE,
       round: 1,
       scores: { A: 0, B: 0 },
       roundHistory: [],
@@ -805,7 +882,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     state.phase = 'placement';
     state.board = new Array(G.NODE_COUNT).fill(null);
     state.turn = state.startingPlayer;
-    state.toPlace = { A: PAWNS_PER_SIDE, B: PAWNS_PER_SIDE };
+    var n = state.pawnsPerSide || PAWNS_PER_SIDE;
+    state.toPlace = { A: n, B: n };
     state.onBoard = { A: 0, B: 0 };
     state.awaitingCapture = null;
     state.lastMove = { A: null, B: null };
@@ -821,7 +899,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   function clone(state) {
     return {
       mode: state.mode, aiSide: state.aiSide, difficulty: state.difficulty,
-      names: state.names, round: state.round,
+      names: state.names, pawnsPerSide: state.pawnsPerSide, round: state.round,
       scores: { A: state.scores.A, B: state.scores.B },
       roundHistory: state.roundHistory.slice(),
       matchOver: state.matchOver, matchWinner: state.matchWinner,
@@ -1123,12 +1201,21 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 /* ===== js/ai.js ===== */
 /* Kwanza Square — the Kwanza AI.
  *
- * Heuristics asked for: block opponent trios, build towards your own, avoid
- * traps (don't wander into positions with no room to move).
+ * The three levels differ in TEMPERAMENT, not just search depth. That matters
+ * because of how this board behaves: with 20 soldiers on 24 points, the fastest
+ * win is not to capture anything, it is to take away the opponent's last free
+ * step and win on "cannot move". A strong engine finds that immediately and the
+ * game is over before it starts.
  *
- * Easy   — greedy with noise, misses some blocks on purpose
- * Normal — 2-ply alpha-beta
- * Hard   — 4-ply alpha-beta in movement, 3-ply in placement
+ * So `squeeze` scales how much the AI values strangling your mobility:
+ *
+ *   Beginner — squeeze 0. Never plays to suffocate you. Chases its own trios,
+ *              blocks yours only half-heartedly, and plays with a wide random
+ *              spread so it makes ordinary human mistakes. One ply.
+ *   Skilled  — squeeze 0.35. Will take a good blocking move when it sees one,
+ *              but does not hunt for the strangle. Two ply, mild randomness.
+ *   Master   — squeeze 1. Full strength, plays the suffocation line on purpose,
+ *              no randomness. Four ply in movement. This one is hard to beat.
  */
 (function (KZ) {
   'use strict';
@@ -1136,16 +1223,15 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   var G = KZ.Geometry;
   var E = KZ.Engine;
 
-  var DEPTH = {
-    easy:   { place: 1, move: 1, noise: 26 },
-    normal: { place: 2, move: 2, noise: 6 },
-    hard:   { place: 3, move: 4, noise: 0 }
+  var LEVELS = {
+    easy:   { label: 'Beginner', place: 1, move: 1, noise: 34, squeeze: 0,    block: 0.55, build: 1 },
+    normal: { label: 'Skilled',  place: 2, move: 2, noise: 11, squeeze: 0.35, block: 0.85, build: 1 },
+    hard:   { label: 'Master',   place: 3, move: 4, noise: 0,  squeeze: 1,    block: 1.15, build: 1 }
   };
 
   // Midpoints carry the radial connectors, so they are worth more than corners.
   var DEGREE = G.adjacency.map(function (a) { return a.length; });
 
-  /** How many of this trio's three points the player holds, and is it blockable. */
   function trioCounts(board, trio) {
     var a = 0, b = 0, empty = 0;
     for (var i = 0; i < 3; i++) {
@@ -1165,7 +1251,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return n;
   }
 
-  function evaluate(state, me) {
+  function evaluate(state, me, cfg) {
     var foe = E.other(me);
 
     if (state.roundOver) {
@@ -1176,33 +1262,34 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
     var score = 0;
 
-    // Material is king — every capture is a step towards emptying the enemy side.
+    // Material — every capture is a step towards emptying the enemy side.
     score += (state.onBoard[me] - state.onBoard[foe]) * 120;
 
-    // Trios held, and trios one step away. Blocking is weighted slightly higher
-    // than building, which is what makes the AI feel defensively alert.
+    // Trios held, and trios one step away. `build` drives its own attack,
+    // `block` drives how urgently it answers yours.
     for (var i = 0; i < G.trios.length; i++) {
       var c = trioCounts(state.board, G.trios[i]);
       var mine = c[me], theirs = c[foe];
-      if (mine === 3) score += 45;
-      else if (mine === 2 && c.empty === 1) score += 14;
-      else if (mine === 1 && c.empty === 2) score += 3;
-      if (theirs === 3) score -= 45;
-      else if (theirs === 2 && c.empty === 1) score -= 17;
-      else if (theirs === 1 && c.empty === 2) score -= 3;
+      if (mine === 3) score += 45 * cfg.build;
+      else if (mine === 2 && c.empty === 1) score += 14 * cfg.build;
+      else if (mine === 1 && c.empty === 2) score += 3 * cfg.build;
+      if (theirs === 3) score -= 45 * cfg.block;
+      else if (theirs === 2 && c.empty === 1) score -= 17 * cfg.block;
+      else if (theirs === 1 && c.empty === 2) score -= 3 * cfg.block;
     }
 
-    // Mobility, and the trap penalty: a soldier with nowhere to go is a liability,
-    // and a side with no moves at all loses the round outright.
+    // Mobility and the strangle. All of it scales with `squeeze`, except the
+    // AI's own survival — it always avoids trapping itself.
     var myMob = mobility(state, me), foeMob = mobility(state, foe);
-    score += (myMob - foeMob) * 6;
+    score += (myMob - foeMob) * 6 * cfg.squeeze;
     if (state.phase === 'movement') {
-      if (myMob === 0) score -= 5000;
-      if (foeMob === 0) score += 5000;
+      if (myMob === 0) score -= 5000;                     // never self-trap
       if (myMob <= 2) score -= (3 - myMob) * 40;
+      if (foeMob === 0) score += 5000 * cfg.squeeze;      // only hunt the kill if allowed
+      if (foeMob <= 2) score += (3 - foeMob) * 40 * cfg.squeeze;
     }
 
-    // Hold the connectors — they are the only way between the three rings.
+    // Hold the connectors — the only way between the three rings.
     for (var n = 0; n < G.NODE_COUNT; n++) {
       if (state.board[n] === me) score += DEGREE[n] * 2;
       else if (state.board[n] === foe) score -= DEGREE[n] * 2;
@@ -1211,12 +1298,12 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return score;
   }
 
-  function search(state, depth, alpha, beta, me, budget) {
-    if (budget.nodes++ > budget.limit) return evaluate(state, me);
-    if (depth <= 0 || state.roundOver || state.matchOver) return evaluate(state, me);
+  function search(state, depth, alpha, beta, me, cfg, budget) {
+    if (budget.nodes++ > budget.limit) return evaluate(state, me, cfg);
+    if (depth <= 0 || state.roundOver || state.matchOver) return evaluate(state, me, cfg);
 
     var actions = E.legalActions(state);
-    if (!actions.length) return evaluate(state, me);
+    if (!actions.length) return evaluate(state, me, cfg);
 
     var mover = state.awaitingCapture || state.turn;
     var maximizing = mover === me;
@@ -1225,7 +1312,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     for (var i = 0; i < actions.length; i++) {
       var next = E.clone(state);
       E.apply(next, actions[i]);
-      var value = search(next, depth - 1, alpha, beta, me, budget);
+      var value = search(next, depth - 1, alpha, beta, me, cfg, budget);
       if (maximizing) {
         if (value > best) best = value;
         if (best > alpha) alpha = best;
@@ -1238,24 +1325,21 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return best;
   }
 
-  /**
-   * Choose an action for the side to move (or to capture). Returns null when
-   * there is nothing to do.
-   */
+  /** Choose an action for the side to move (or to capture). */
   function chooseAction(state) {
     var mover = state.awaitingCapture || state.turn;
     var actions = E.legalActions(state);
     if (!actions.length) return null;
     if (actions.length === 1) return actions[0];
 
-    var cfg = DEPTH[state.difficulty] || DEPTH.normal;
+    var cfg = LEVELS[state.difficulty] || LEVELS.normal;
     var depth = state.phase === 'placement' ? cfg.place : cfg.move;
     var budget = { nodes: 0, limit: 60000 };
 
     var scored = actions.map(function (action) {
       var next = E.clone(state);
       E.apply(next, action);
-      var value = search(next, depth - 1, -Infinity, Infinity, mover, budget);
+      var value = search(next, depth - 1, -Infinity, Infinity, mover, cfg, budget);
       if (cfg.noise) value += (Math.random() * 2 - 1) * cfg.noise;
       return { action: action, value: value };
     });
@@ -1265,6 +1349,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   }
 
   KZ.AI = {
+    LEVELS: LEVELS,
     chooseAction: chooseAction,
     evaluate: evaluate
   };
@@ -1297,6 +1382,42 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     orangeLift: '#F79438',
     black: '#101010',
     white: '#FFFFFF'
+  };
+
+  /* Soldier colourways.
+   *
+   * Gold is fixed for the first player. The opponent is switchable so the
+   * colour can be chosen by eye on the real board — the original near-black
+   * ("Onyx") reads too dark against the black motif tiles.
+   *
+   * Each entry is a three-stop sphere gradient plus a rim, a centre pip and a
+   * glow used for the trio highlight.
+   */
+  var SOLDIERS = {
+    gold: {
+      label: 'Gold', light: '#FFE9A8', mid: '#E9B833', dark: '#8A6408',
+      rim: '#6B4D06', rimWidth: 3, pip: '#6B4D06', inner: 'rgba(255,255,255,.42)', glow: '#FFD36B'
+    },
+    silver: {
+      label: 'Silver', light: '#FFFFFF', mid: '#C3CDD9', dark: '#66727F',
+      rim: '#3E4854', rimWidth: 3, pip: '#3E4854', inner: 'rgba(255,255,255,.55)', glow: '#E6EEF8'
+    },
+    jade: {
+      label: 'Jade', light: '#9FF3D4', mid: '#16A085', dark: '#075040',
+      rim: '#04322A', rimWidth: 3, pip: '#D6FFF2', inner: 'rgba(255,255,255,.4)', glow: '#5FE3C0'
+    },
+    crimson: {
+      label: 'Crimson', light: '#FFA898', mid: '#C0392B', dark: '#5F110A',
+      rim: '#3D0A06', rimWidth: 3, pip: '#FFD9D2', inner: 'rgba(255,255,255,.34)', glow: '#FF8570'
+    },
+    ivory: {
+      label: 'Ivory', light: '#FFFFFF', mid: '#F2E8D4', dark: '#B3A17A',
+      rim: '#6F6244', rimWidth: 3, pip: '#6F6244', inner: 'rgba(255,255,255,.6)', glow: '#FFF6E2'
+    },
+    onyx: {
+      label: 'Onyx', light: '#6A6A6A', mid: '#1C1C1C', dark: '#000000',
+      rim: '#FFFFFF', rimWidth: 2.5, pip: 'rgba(255,255,255,.6)', inner: 'rgba(255,255,255,.3)', glow: '#FFFFFF'
+    }
   };
 
   var TILE = 72;      // painted motif tile
@@ -1437,15 +1558,14 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     el('stop', { offset: '0%', 'stop-color': BOARD.blue }, bg);
     el('stop', { offset: '100%', 'stop-color': BOARD.blueDeep }, bg);
 
-    var gold = el('radialGradient', { id: p + '-gold', cx: '34%', cy: '30%', r: '76%' }, d);
-    el('stop', { offset: '0%', 'stop-color': '#FFE9A8' }, gold);
-    el('stop', { offset: '45%', 'stop-color': '#E9B833' }, gold);
-    el('stop', { offset: '100%', 'stop-color': '#8A6408' }, gold);
-
-    var black = el('radialGradient', { id: p + '-black', cx: '34%', cy: '30%', r: '76%' }, d);
-    el('stop', { offset: '0%', 'stop-color': '#6A6A6A' }, black);
-    el('stop', { offset: '48%', 'stop-color': '#1C1C1C' }, black);
-    el('stop', { offset: '100%', 'stop-color': '#000000' }, black);
+    // one sphere gradient per available soldier colourway
+    Object.keys(SOLDIERS).forEach(function (key) {
+      var s = SOLDIERS[key];
+      var g = el('radialGradient', { id: p + '-s-' + key, cx: '34%', cy: '30%', r: '76%' }, d);
+      el('stop', { offset: '0%', 'stop-color': s.light }, g);
+      el('stop', { offset: '46%', 'stop-color': s.mid }, g);
+      el('stop', { offset: '100%', 'stop-color': s.dark }, g);
+    });
 
     // the sacred centre's glow — a soft falloff, not a flat disc
     var aura = el('radialGradient', { id: p + '-aura', cx: '50%', cy: '50%', r: '50%' }, d);
@@ -1582,21 +1702,17 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return g;
   }
 
-  function pawnShape(player, prefix) {
+  function pawnShape(colourKey, prefix) {
+    var s = SOLDIERS[colourKey] || SOLDIERS.onyx;
     var g = document.createElementNS(NS, 'g');
     g.setAttribute('class', 'pawn');
     el('circle', {
       class: 'pawn-body', r: PAWN,
-      fill: 'url(#' + prefix + (player === 'A' ? '-gold' : '-black') + ')',
-      stroke: player === 'A' ? '#6B4D06' : '#FFFFFF',
-      'stroke-width': player === 'A' ? 3 : 2.5
+      fill: 'url(#' + prefix + '-s-' + colourKey + ')',
+      stroke: s.rim, 'stroke-width': s.rimWidth
     }, g);
-    el('circle', {
-      r: PAWN - 10, fill: 'none',
-      stroke: player === 'A' ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.3)',
-      'stroke-width': 2
-    }, g);
-    el('circle', { r: 4, fill: player === 'A' ? '#6B4D06' : 'rgba(255,255,255,.6)' }, g);
+    el('circle', { r: PAWN - 10, fill: 'none', stroke: s.inner, 'stroke-width': 2 }, g);
+    el('circle', { r: 4, fill: s.pip }, g);
     return g;
   }
 
@@ -1632,8 +1748,23 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return {
       svg: svg, prefix: prefix, nodes: nodeEls,
       trioLayer: trioLayer, fxLayer: fxLayer,
-      owners: new Array(24).fill(null)
+      owners: new Array(24).fill(null),
+      soldier: { A: 'gold', B: 'jade' }
     };
+  }
+
+  /**
+   * Change which colourways the two sides use, repainting any soldiers already
+   * on the board. Clearing `owners` alone would make the next diff a no-op, so
+   * the drawn pawns are removed here explicitly.
+   */
+  function setSoldiers(view, map) {
+    view.soldier = { A: map.A || view.soldier.A, B: map.B || view.soldier.B };
+    view.nodes.forEach(function (g, i) {
+      var slot = g.querySelector('.pawn-slot');
+      while (slot.firstChild) slot.removeChild(slot.firstChild);
+      view.owners[i] = null;
+    });
   }
 
   /**
@@ -1660,7 +1791,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
         var slot = g.querySelector('.pawn-slot');
         while (slot.firstChild) slot.removeChild(slot.firstChild);
         if (owner) {
-          var pawn = pawnShape(owner, view.prefix);
+          var pawn = pawnShape(view.soldier[owner], view.prefix);
           slot.appendChild(pawn);
           if (view.owners[i] === null) {
             pawn.classList.add('place-pop');
@@ -1679,6 +1810,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       g.classList.toggle('last-move', !!vm.lastMove && vm.lastMove.to === i);
       g.classList.toggle('in-trio-a', inTrio[i] === 'A');
       g.classList.toggle('in-trio-b', inTrio[i] === 'B');
+      if (inTrio[i]) {
+        g.querySelector('.trio-ring').setAttribute('stroke', SOLDIERS[view.soldier[inTrio[i]]].glow);
+      }
     }
 
     var layer = view.trioLayer;
@@ -1689,7 +1823,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       el('line', {
         class: 'trio-glow',
         x1: a.x, y1: a.y, x2: c.x, y2: c.y,
-        stroke: entry.player === 'A' ? '#FFD36B' : '#FFFFFF',
+        stroke: SOLDIERS[view.soldier[entry.player]].glow,
         'stroke-width': 14, 'stroke-linecap': 'round',
         filter: 'url(#' + view.prefix + '-glow)'
       }, layer);
@@ -1702,7 +1836,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     var c = el('circle', {
       class: 'capture-burst',
       cx: n.x, cy: n.y, r: 34, fill: 'none',
-      stroke: player === 'A' ? '#FFD36B' : '#FFFFFF',
+      stroke: SOLDIERS[view.soldier[player]].glow,
       'stroke-width': 8, filter: 'url(#' + view.prefix + '-glow)'
     }, view.fxLayer);
     c.addEventListener('animationend', function () {
@@ -1729,12 +1863,21 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     drawCenter(svg, prefix);
   }
 
+  /** CSS gradient for the little soldier chip in the score bar. */
+  function chipStyle(colourKey) {
+    var s = SOLDIERS[colourKey] || SOLDIERS.onyx;
+    return 'radial-gradient(circle at 35% 30%, ' + s.light + ', ' + s.mid + ' 62%, ' + s.dark + ')';
+  }
+
   KZ.Render = {
     BOARD: BOARD,
+    SOLDIERS: SOLDIERS,
     build: build,
     update: update,
+    setSoldiers: setSoldiers,
     burst: burst,
     emblem: emblem,
+    chipStyle: chipStyle,
     motifFor: motifFor
   };
 })(window.KZ = window.KZ || {});
@@ -1759,7 +1902,15 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     sound: true,
     confirm: false,
     difficulty: 'normal',
-    mode: 'ai'
+    mode: 'ai',
+    opponent: 'jade',    // colourway for the second side; gold is fixed
+    pawns: 10            // Martin's ruling; adjustable only to test the feel
+  };
+
+  var PAWNS_HINT = {
+    10: '10 is the traditional count. It leaves only 4 free intersections, so rounds are almost always decided by trapping rather than by capturing.',
+    9: '9 leaves 6 free intersections. Rounds run roughly half again as long and trios start deciding games instead of just decorating them.',
+    8: '8 leaves 8 free intersections — the most open game, closest to how the board plays with room to manoeuvre.'
   };
 
   // ------------------------------------------------------------------ helpers
@@ -1771,6 +1922,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     try {
       var raw = localStorage.getItem('kwanza-settings');
       if (raw) Object.assign(settings, JSON.parse(raw));
+      // saved settings from before the colour picker existed have no opponent
+      if (!R.SOLDIERS[settings.opponent]) settings.opponent = 'jade';
     } catch (e) { /* private mode — defaults are fine */ }
   }
   function saveSettings() {
@@ -1990,7 +2143,12 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
     thinking = true;
     render();
-    var delay = state.awaitingCapture ? 560 : (state.phase === 'placement' ? 340 : 460);
+    // The search itself is near-instant, which made the AI feel like it was
+    // slapping pieces down. Pace it so a move reads as considered.
+    var base = state.phase === 'placement' ? 620 : 900;
+    if (state.difficulty === 'hard') base += 260;      // the Master "thinks" longer
+    if (state.awaitingCapture) base += 320;            // a capture deserves a beat
+    var delay = base + Math.random() * 420;
     setTimeout(function () {
       if (!state || state.roundOver || state.matchOver) { thinking = false; render(); return; }
       var action = AI.chooseAction(state);
@@ -2007,7 +2165,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
   function playerName(side) {
     if (state.mode === 'ai' && side === state.aiSide) return 'Kwanza AI';
-    return side === 'A' ? 'Gold' : 'Black';
+    return side === 'A' ? 'Gold' : R.SOLDIERS[settings.opponent].label;
   }
 
   function render() {
@@ -2016,6 +2174,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
     $('#name-a').textContent = playerName('A');
     $('#name-b').textContent = playerName('B');
+    $('#chip-a').style.background = R.chipStyle('gold');
+    $('#chip-b').style.background = R.chipStyle(settings.opponent);
     $('#score-value').textContent = state.scores.A + ' – ' + state.scores.B;
     $('#score-round').textContent = 'Round ' + state.round + ' · best of 3';
 
@@ -2238,6 +2398,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   function renderTutorial() {
     var step = tutorialSteps[tutorialIndex];
     if (!tutorialView) tutorialView = R.build($('#tutorial-board'), null);
+    if (tutorialView.soldier.B !== settings.opponent) {
+      R.setSoldiers(tutorialView, { A: 'gold', B: settings.opponent });
+    }
     var vm = step.vm();
     vm.board = vm.board || new Array(24).fill(null);
     R.update(tutorialView, vm);
@@ -2260,13 +2423,15 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     state = E.createMatch({
       mode: settings.mode,
       aiSide: 'B',
-      difficulty: settings.difficulty
+      difficulty: settings.difficulty,
+      pawns: settings.pawns
     });
     history = [];
     selected = null;
     staged = null;
     thinking = false;
     if (!view) view = R.build($('#board'), onPick);
+    if (view.soldier.B !== settings.opponent) R.setSoldiers(view, { A: 'gold', B: settings.opponent });
     // Do NOT reset view.owners here: it is the record of what is actually drawn.
     // Clearing it would make the empty new board diff as "no change" and leave
     // the previous match's soldiers on screen. render() diffs it correctly.
@@ -2277,6 +2442,12 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
   // ---------------------------------------------------------------------- wire
 
+  var DIFFICULTY_HINT = {
+    easy: 'Beginner never plays to trap you. It chases its own trios, blocks yours only half-heartedly, and makes ordinary mistakes.',
+    normal: 'Skilled looks two moves ahead and will take a good block when it sees one — but it does not hunt for the strangle.',
+    hard: 'Master looks four moves ahead and will deliberately close off your last free step to win on “cannot move”. Genuinely hard.'
+  };
+
   function syncModeUI() {
     $all('[data-mode]').forEach(function (btn) {
       btn.setAttribute('aria-checked', String(btn.dataset.mode === settings.mode));
@@ -2285,6 +2456,19 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     $all('[data-difficulty]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(btn.dataset.difficulty === settings.difficulty));
     });
+    $('#difficulty-hint').textContent = DIFFICULTY_HINT[settings.difficulty] || '';
+
+    $all('[data-opponent]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.opponent === settings.opponent));
+      btn.querySelector('.dot').style.background = R.chipStyle(btn.dataset.opponent);
+    });
+    $('#prev-gold').style.background = R.chipStyle('gold');
+    $('#prev-opp').style.background = R.chipStyle(settings.opponent);
+
+    $all('[data-pawns]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.dataset.pawns) === settings.pawns));
+    });
+    $('#pawns-hint').textContent = PAWNS_HINT[settings.pawns] || '';
     $all('[data-toggle]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(!!settings[btn.dataset.toggle]));
     });
@@ -2310,6 +2494,23 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     $all('[data-difficulty]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         settings.difficulty = btn.dataset.difficulty; saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-pawns]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.pawns = Number(btn.dataset.pawns);
+        saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-opponent]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.opponent = btn.dataset.opponent;
+        saveSettings(); syncModeUI();
+        // repaint a match already in progress so a colour can be judged live
+        if (view && view.soldier.B !== settings.opponent) {
+          R.setSoldiers(view, { A: 'gold', B: settings.opponent });
+          if (state) render();
+        }
       });
     });
     $all('[data-toggle]').forEach(function (btn) {

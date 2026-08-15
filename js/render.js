@@ -25,6 +25,42 @@
     white: '#FFFFFF'
   };
 
+  /* Soldier colourways.
+   *
+   * Gold is fixed for the first player. The opponent is switchable so the
+   * colour can be chosen by eye on the real board — the original near-black
+   * ("Onyx") reads too dark against the black motif tiles.
+   *
+   * Each entry is a three-stop sphere gradient plus a rim, a centre pip and a
+   * glow used for the trio highlight.
+   */
+  var SOLDIERS = {
+    gold: {
+      label: 'Gold', light: '#FFE9A8', mid: '#E9B833', dark: '#8A6408',
+      rim: '#6B4D06', rimWidth: 3, pip: '#6B4D06', inner: 'rgba(255,255,255,.42)', glow: '#FFD36B'
+    },
+    silver: {
+      label: 'Silver', light: '#FFFFFF', mid: '#C3CDD9', dark: '#66727F',
+      rim: '#3E4854', rimWidth: 3, pip: '#3E4854', inner: 'rgba(255,255,255,.55)', glow: '#E6EEF8'
+    },
+    jade: {
+      label: 'Jade', light: '#9FF3D4', mid: '#16A085', dark: '#075040',
+      rim: '#04322A', rimWidth: 3, pip: '#D6FFF2', inner: 'rgba(255,255,255,.4)', glow: '#5FE3C0'
+    },
+    crimson: {
+      label: 'Crimson', light: '#FFA898', mid: '#C0392B', dark: '#5F110A',
+      rim: '#3D0A06', rimWidth: 3, pip: '#FFD9D2', inner: 'rgba(255,255,255,.34)', glow: '#FF8570'
+    },
+    ivory: {
+      label: 'Ivory', light: '#FFFFFF', mid: '#F2E8D4', dark: '#B3A17A',
+      rim: '#6F6244', rimWidth: 3, pip: '#6F6244', inner: 'rgba(255,255,255,.6)', glow: '#FFF6E2'
+    },
+    onyx: {
+      label: 'Onyx', light: '#6A6A6A', mid: '#1C1C1C', dark: '#000000',
+      rim: '#FFFFFF', rimWidth: 2.5, pip: 'rgba(255,255,255,.6)', inner: 'rgba(255,255,255,.3)', glow: '#FFFFFF'
+    }
+  };
+
   var TILE = 72;      // painted motif tile
   var SEAT = 19;      // where a soldier sits
   var PAWN = 30;
@@ -163,15 +199,14 @@
     el('stop', { offset: '0%', 'stop-color': BOARD.blue }, bg);
     el('stop', { offset: '100%', 'stop-color': BOARD.blueDeep }, bg);
 
-    var gold = el('radialGradient', { id: p + '-gold', cx: '34%', cy: '30%', r: '76%' }, d);
-    el('stop', { offset: '0%', 'stop-color': '#FFE9A8' }, gold);
-    el('stop', { offset: '45%', 'stop-color': '#E9B833' }, gold);
-    el('stop', { offset: '100%', 'stop-color': '#8A6408' }, gold);
-
-    var black = el('radialGradient', { id: p + '-black', cx: '34%', cy: '30%', r: '76%' }, d);
-    el('stop', { offset: '0%', 'stop-color': '#6A6A6A' }, black);
-    el('stop', { offset: '48%', 'stop-color': '#1C1C1C' }, black);
-    el('stop', { offset: '100%', 'stop-color': '#000000' }, black);
+    // one sphere gradient per available soldier colourway
+    Object.keys(SOLDIERS).forEach(function (key) {
+      var s = SOLDIERS[key];
+      var g = el('radialGradient', { id: p + '-s-' + key, cx: '34%', cy: '30%', r: '76%' }, d);
+      el('stop', { offset: '0%', 'stop-color': s.light }, g);
+      el('stop', { offset: '46%', 'stop-color': s.mid }, g);
+      el('stop', { offset: '100%', 'stop-color': s.dark }, g);
+    });
 
     // the sacred centre's glow — a soft falloff, not a flat disc
     var aura = el('radialGradient', { id: p + '-aura', cx: '50%', cy: '50%', r: '50%' }, d);
@@ -308,21 +343,17 @@
     return g;
   }
 
-  function pawnShape(player, prefix) {
+  function pawnShape(colourKey, prefix) {
+    var s = SOLDIERS[colourKey] || SOLDIERS.onyx;
     var g = document.createElementNS(NS, 'g');
     g.setAttribute('class', 'pawn');
     el('circle', {
       class: 'pawn-body', r: PAWN,
-      fill: 'url(#' + prefix + (player === 'A' ? '-gold' : '-black') + ')',
-      stroke: player === 'A' ? '#6B4D06' : '#FFFFFF',
-      'stroke-width': player === 'A' ? 3 : 2.5
+      fill: 'url(#' + prefix + '-s-' + colourKey + ')',
+      stroke: s.rim, 'stroke-width': s.rimWidth
     }, g);
-    el('circle', {
-      r: PAWN - 10, fill: 'none',
-      stroke: player === 'A' ? 'rgba(255,255,255,.42)' : 'rgba(255,255,255,.3)',
-      'stroke-width': 2
-    }, g);
-    el('circle', { r: 4, fill: player === 'A' ? '#6B4D06' : 'rgba(255,255,255,.6)' }, g);
+    el('circle', { r: PAWN - 10, fill: 'none', stroke: s.inner, 'stroke-width': 2 }, g);
+    el('circle', { r: 4, fill: s.pip }, g);
     return g;
   }
 
@@ -358,8 +389,23 @@
     return {
       svg: svg, prefix: prefix, nodes: nodeEls,
       trioLayer: trioLayer, fxLayer: fxLayer,
-      owners: new Array(24).fill(null)
+      owners: new Array(24).fill(null),
+      soldier: { A: 'gold', B: 'jade' }
     };
+  }
+
+  /**
+   * Change which colourways the two sides use, repainting any soldiers already
+   * on the board. Clearing `owners` alone would make the next diff a no-op, so
+   * the drawn pawns are removed here explicitly.
+   */
+  function setSoldiers(view, map) {
+    view.soldier = { A: map.A || view.soldier.A, B: map.B || view.soldier.B };
+    view.nodes.forEach(function (g, i) {
+      var slot = g.querySelector('.pawn-slot');
+      while (slot.firstChild) slot.removeChild(slot.firstChild);
+      view.owners[i] = null;
+    });
   }
 
   /**
@@ -386,7 +432,7 @@
         var slot = g.querySelector('.pawn-slot');
         while (slot.firstChild) slot.removeChild(slot.firstChild);
         if (owner) {
-          var pawn = pawnShape(owner, view.prefix);
+          var pawn = pawnShape(view.soldier[owner], view.prefix);
           slot.appendChild(pawn);
           if (view.owners[i] === null) {
             pawn.classList.add('place-pop');
@@ -405,6 +451,9 @@
       g.classList.toggle('last-move', !!vm.lastMove && vm.lastMove.to === i);
       g.classList.toggle('in-trio-a', inTrio[i] === 'A');
       g.classList.toggle('in-trio-b', inTrio[i] === 'B');
+      if (inTrio[i]) {
+        g.querySelector('.trio-ring').setAttribute('stroke', SOLDIERS[view.soldier[inTrio[i]]].glow);
+      }
     }
 
     var layer = view.trioLayer;
@@ -415,7 +464,7 @@
       el('line', {
         class: 'trio-glow',
         x1: a.x, y1: a.y, x2: c.x, y2: c.y,
-        stroke: entry.player === 'A' ? '#FFD36B' : '#FFFFFF',
+        stroke: SOLDIERS[view.soldier[entry.player]].glow,
         'stroke-width': 14, 'stroke-linecap': 'round',
         filter: 'url(#' + view.prefix + '-glow)'
       }, layer);
@@ -428,7 +477,7 @@
     var c = el('circle', {
       class: 'capture-burst',
       cx: n.x, cy: n.y, r: 34, fill: 'none',
-      stroke: player === 'A' ? '#FFD36B' : '#FFFFFF',
+      stroke: SOLDIERS[view.soldier[player]].glow,
       'stroke-width': 8, filter: 'url(#' + view.prefix + '-glow)'
     }, view.fxLayer);
     c.addEventListener('animationend', function () {
@@ -455,12 +504,21 @@
     drawCenter(svg, prefix);
   }
 
+  /** CSS gradient for the little soldier chip in the score bar. */
+  function chipStyle(colourKey) {
+    var s = SOLDIERS[colourKey] || SOLDIERS.onyx;
+    return 'radial-gradient(circle at 35% 30%, ' + s.light + ', ' + s.mid + ' 62%, ' + s.dark + ')';
+  }
+
   KZ.Render = {
     BOARD: BOARD,
+    SOLDIERS: SOLDIERS,
     build: build,
     update: update,
+    setSoldiers: setSoldiers,
     burst: burst,
     emblem: emblem,
+    chipStyle: chipStyle,
     motifFor: motifFor
   };
 })(window.KZ = window.KZ || {});

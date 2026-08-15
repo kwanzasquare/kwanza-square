@@ -1,11 +1,20 @@
 /* Kwanza Square — the Kwanza AI.
  *
- * Heuristics asked for: block opponent trios, build towards your own, avoid
- * traps (don't wander into positions with no room to move).
+ * The three levels differ in TEMPERAMENT, not just search depth. That matters
+ * because of how this board behaves: with 20 soldiers on 24 points, the fastest
+ * win is not to capture anything, it is to take away the opponent's last free
+ * step and win on "cannot move". A strong engine finds that immediately and the
+ * game is over before it starts.
  *
- * Easy   — greedy with noise, misses some blocks on purpose
- * Normal — 2-ply alpha-beta
- * Hard   — 4-ply alpha-beta in movement, 3-ply in placement
+ * So `squeeze` scales how much the AI values strangling your mobility:
+ *
+ *   Beginner — squeeze 0. Never plays to suffocate you. Chases its own trios,
+ *              blocks yours only half-heartedly, and plays with a wide random
+ *              spread so it makes ordinary human mistakes. One ply.
+ *   Skilled  — squeeze 0.35. Will take a good blocking move when it sees one,
+ *              but does not hunt for the strangle. Two ply, mild randomness.
+ *   Master   — squeeze 1. Full strength, plays the suffocation line on purpose,
+ *              no randomness. Four ply in movement. This one is hard to beat.
  */
 (function (KZ) {
   'use strict';
@@ -13,16 +22,15 @@
   var G = KZ.Geometry;
   var E = KZ.Engine;
 
-  var DEPTH = {
-    easy:   { place: 1, move: 1, noise: 26 },
-    normal: { place: 2, move: 2, noise: 6 },
-    hard:   { place: 3, move: 4, noise: 0 }
+  var LEVELS = {
+    easy:   { label: 'Beginner', place: 1, move: 1, noise: 34, squeeze: 0,    block: 0.55, build: 1 },
+    normal: { label: 'Skilled',  place: 2, move: 2, noise: 11, squeeze: 0.35, block: 0.85, build: 1 },
+    hard:   { label: 'Master',   place: 3, move: 4, noise: 0,  squeeze: 1,    block: 1.15, build: 1 }
   };
 
   // Midpoints carry the radial connectors, so they are worth more than corners.
   var DEGREE = G.adjacency.map(function (a) { return a.length; });
 
-  /** How many of this trio's three points the player holds, and is it blockable. */
   function trioCounts(board, trio) {
     var a = 0, b = 0, empty = 0;
     for (var i = 0; i < 3; i++) {
@@ -42,7 +50,7 @@
     return n;
   }
 
-  function evaluate(state, me) {
+  function evaluate(state, me, cfg) {
     var foe = E.other(me);
 
     if (state.roundOver) {
@@ -53,33 +61,34 @@
 
     var score = 0;
 
-    // Material is king — every capture is a step towards emptying the enemy side.
+    // Material — every capture is a step towards emptying the enemy side.
     score += (state.onBoard[me] - state.onBoard[foe]) * 120;
 
-    // Trios held, and trios one step away. Blocking is weighted slightly higher
-    // than building, which is what makes the AI feel defensively alert.
+    // Trios held, and trios one step away. `build` drives its own attack,
+    // `block` drives how urgently it answers yours.
     for (var i = 0; i < G.trios.length; i++) {
       var c = trioCounts(state.board, G.trios[i]);
       var mine = c[me], theirs = c[foe];
-      if (mine === 3) score += 45;
-      else if (mine === 2 && c.empty === 1) score += 14;
-      else if (mine === 1 && c.empty === 2) score += 3;
-      if (theirs === 3) score -= 45;
-      else if (theirs === 2 && c.empty === 1) score -= 17;
-      else if (theirs === 1 && c.empty === 2) score -= 3;
+      if (mine === 3) score += 45 * cfg.build;
+      else if (mine === 2 && c.empty === 1) score += 14 * cfg.build;
+      else if (mine === 1 && c.empty === 2) score += 3 * cfg.build;
+      if (theirs === 3) score -= 45 * cfg.block;
+      else if (theirs === 2 && c.empty === 1) score -= 17 * cfg.block;
+      else if (theirs === 1 && c.empty === 2) score -= 3 * cfg.block;
     }
 
-    // Mobility, and the trap penalty: a soldier with nowhere to go is a liability,
-    // and a side with no moves at all loses the round outright.
+    // Mobility and the strangle. All of it scales with `squeeze`, except the
+    // AI's own survival — it always avoids trapping itself.
     var myMob = mobility(state, me), foeMob = mobility(state, foe);
-    score += (myMob - foeMob) * 6;
+    score += (myMob - foeMob) * 6 * cfg.squeeze;
     if (state.phase === 'movement') {
-      if (myMob === 0) score -= 5000;
-      if (foeMob === 0) score += 5000;
+      if (myMob === 0) score -= 5000;                     // never self-trap
       if (myMob <= 2) score -= (3 - myMob) * 40;
+      if (foeMob === 0) score += 5000 * cfg.squeeze;      // only hunt the kill if allowed
+      if (foeMob <= 2) score += (3 - foeMob) * 40 * cfg.squeeze;
     }
 
-    // Hold the connectors — they are the only way between the three rings.
+    // Hold the connectors — the only way between the three rings.
     for (var n = 0; n < G.NODE_COUNT; n++) {
       if (state.board[n] === me) score += DEGREE[n] * 2;
       else if (state.board[n] === foe) score -= DEGREE[n] * 2;
@@ -88,12 +97,12 @@
     return score;
   }
 
-  function search(state, depth, alpha, beta, me, budget) {
-    if (budget.nodes++ > budget.limit) return evaluate(state, me);
-    if (depth <= 0 || state.roundOver || state.matchOver) return evaluate(state, me);
+  function search(state, depth, alpha, beta, me, cfg, budget) {
+    if (budget.nodes++ > budget.limit) return evaluate(state, me, cfg);
+    if (depth <= 0 || state.roundOver || state.matchOver) return evaluate(state, me, cfg);
 
     var actions = E.legalActions(state);
-    if (!actions.length) return evaluate(state, me);
+    if (!actions.length) return evaluate(state, me, cfg);
 
     var mover = state.awaitingCapture || state.turn;
     var maximizing = mover === me;
@@ -102,7 +111,7 @@
     for (var i = 0; i < actions.length; i++) {
       var next = E.clone(state);
       E.apply(next, actions[i]);
-      var value = search(next, depth - 1, alpha, beta, me, budget);
+      var value = search(next, depth - 1, alpha, beta, me, cfg, budget);
       if (maximizing) {
         if (value > best) best = value;
         if (best > alpha) alpha = best;
@@ -115,24 +124,21 @@
     return best;
   }
 
-  /**
-   * Choose an action for the side to move (or to capture). Returns null when
-   * there is nothing to do.
-   */
+  /** Choose an action for the side to move (or to capture). */
   function chooseAction(state) {
     var mover = state.awaitingCapture || state.turn;
     var actions = E.legalActions(state);
     if (!actions.length) return null;
     if (actions.length === 1) return actions[0];
 
-    var cfg = DEPTH[state.difficulty] || DEPTH.normal;
+    var cfg = LEVELS[state.difficulty] || LEVELS.normal;
     var depth = state.phase === 'placement' ? cfg.place : cfg.move;
     var budget = { nodes: 0, limit: 60000 };
 
     var scored = actions.map(function (action) {
       var next = E.clone(state);
       E.apply(next, action);
-      var value = search(next, depth - 1, -Infinity, Infinity, mover, budget);
+      var value = search(next, depth - 1, -Infinity, Infinity, mover, cfg, budget);
       if (cfg.noise) value += (Math.random() * 2 - 1) * cfg.noise;
       return { action: action, value: value };
     });
@@ -142,6 +148,7 @@
   }
 
   KZ.AI = {
+    LEVELS: LEVELS,
     chooseAction: chooseAction,
     evaluate: evaluate
   };

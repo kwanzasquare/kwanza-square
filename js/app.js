@@ -16,7 +16,15 @@
     sound: true,
     confirm: false,
     difficulty: 'normal',
-    mode: 'ai'
+    mode: 'ai',
+    opponent: 'jade',    // colourway for the second side; gold is fixed
+    pawns: 10            // Martin's ruling; adjustable only to test the feel
+  };
+
+  var PAWNS_HINT = {
+    10: '10 is the traditional count. It leaves only 4 free intersections, so rounds are almost always decided by trapping rather than by capturing.',
+    9: '9 leaves 6 free intersections. Rounds run roughly half again as long and trios start deciding games instead of just decorating them.',
+    8: '8 leaves 8 free intersections — the most open game, closest to how the board plays with room to manoeuvre.'
   };
 
   // ------------------------------------------------------------------ helpers
@@ -28,6 +36,8 @@
     try {
       var raw = localStorage.getItem('kwanza-settings');
       if (raw) Object.assign(settings, JSON.parse(raw));
+      // saved settings from before the colour picker existed have no opponent
+      if (!R.SOLDIERS[settings.opponent]) settings.opponent = 'jade';
     } catch (e) { /* private mode — defaults are fine */ }
   }
   function saveSettings() {
@@ -247,7 +257,12 @@
 
     thinking = true;
     render();
-    var delay = state.awaitingCapture ? 560 : (state.phase === 'placement' ? 340 : 460);
+    // The search itself is near-instant, which made the AI feel like it was
+    // slapping pieces down. Pace it so a move reads as considered.
+    var base = state.phase === 'placement' ? 620 : 900;
+    if (state.difficulty === 'hard') base += 260;      // the Master "thinks" longer
+    if (state.awaitingCapture) base += 320;            // a capture deserves a beat
+    var delay = base + Math.random() * 420;
     setTimeout(function () {
       if (!state || state.roundOver || state.matchOver) { thinking = false; render(); return; }
       var action = AI.chooseAction(state);
@@ -264,7 +279,7 @@
 
   function playerName(side) {
     if (state.mode === 'ai' && side === state.aiSide) return 'Kwanza AI';
-    return side === 'A' ? 'Gold' : 'Black';
+    return side === 'A' ? 'Gold' : R.SOLDIERS[settings.opponent].label;
   }
 
   function render() {
@@ -273,6 +288,8 @@
 
     $('#name-a').textContent = playerName('A');
     $('#name-b').textContent = playerName('B');
+    $('#chip-a').style.background = R.chipStyle('gold');
+    $('#chip-b').style.background = R.chipStyle(settings.opponent);
     $('#score-value').textContent = state.scores.A + ' – ' + state.scores.B;
     $('#score-round').textContent = 'Round ' + state.round + ' · best of 3';
 
@@ -495,6 +512,9 @@
   function renderTutorial() {
     var step = tutorialSteps[tutorialIndex];
     if (!tutorialView) tutorialView = R.build($('#tutorial-board'), null);
+    if (tutorialView.soldier.B !== settings.opponent) {
+      R.setSoldiers(tutorialView, { A: 'gold', B: settings.opponent });
+    }
     var vm = step.vm();
     vm.board = vm.board || new Array(24).fill(null);
     R.update(tutorialView, vm);
@@ -517,13 +537,15 @@
     state = E.createMatch({
       mode: settings.mode,
       aiSide: 'B',
-      difficulty: settings.difficulty
+      difficulty: settings.difficulty,
+      pawns: settings.pawns
     });
     history = [];
     selected = null;
     staged = null;
     thinking = false;
     if (!view) view = R.build($('#board'), onPick);
+    if (view.soldier.B !== settings.opponent) R.setSoldiers(view, { A: 'gold', B: settings.opponent });
     // Do NOT reset view.owners here: it is the record of what is actually drawn.
     // Clearing it would make the empty new board diff as "no change" and leave
     // the previous match's soldiers on screen. render() diffs it correctly.
@@ -534,6 +556,12 @@
 
   // ---------------------------------------------------------------------- wire
 
+  var DIFFICULTY_HINT = {
+    easy: 'Beginner never plays to trap you. It chases its own trios, blocks yours only half-heartedly, and makes ordinary mistakes.',
+    normal: 'Skilled looks two moves ahead and will take a good block when it sees one — but it does not hunt for the strangle.',
+    hard: 'Master looks four moves ahead and will deliberately close off your last free step to win on “cannot move”. Genuinely hard.'
+  };
+
   function syncModeUI() {
     $all('[data-mode]').forEach(function (btn) {
       btn.setAttribute('aria-checked', String(btn.dataset.mode === settings.mode));
@@ -542,6 +570,19 @@
     $all('[data-difficulty]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(btn.dataset.difficulty === settings.difficulty));
     });
+    $('#difficulty-hint').textContent = DIFFICULTY_HINT[settings.difficulty] || '';
+
+    $all('[data-opponent]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.opponent === settings.opponent));
+      btn.querySelector('.dot').style.background = R.chipStyle(btn.dataset.opponent);
+    });
+    $('#prev-gold').style.background = R.chipStyle('gold');
+    $('#prev-opp').style.background = R.chipStyle(settings.opponent);
+
+    $all('[data-pawns]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.dataset.pawns) === settings.pawns));
+    });
+    $('#pawns-hint').textContent = PAWNS_HINT[settings.pawns] || '';
     $all('[data-toggle]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(!!settings[btn.dataset.toggle]));
     });
@@ -567,6 +608,23 @@
     $all('[data-difficulty]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         settings.difficulty = btn.dataset.difficulty; saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-pawns]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.pawns = Number(btn.dataset.pawns);
+        saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-opponent]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.opponent = btn.dataset.opponent;
+        saveSettings(); syncModeUI();
+        // repaint a match already in progress so a colour can be judged live
+        if (view && view.soldier.B !== settings.opponent) {
+          R.setSoldiers(view, { A: 'gold', B: settings.opponent });
+          if (state) render();
+        }
       });
     });
     $all('[data-toggle]').forEach(function (btn) {
