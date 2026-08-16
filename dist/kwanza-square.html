@@ -180,10 +180,14 @@
         <div class="score-value" id="final-score" style="font-size:34px;margin-top:6px"></div>
         <div class="round-pills" id="round-pills"></div>
       </div>
+      <div class="panel" id="grade-panel" hidden></div>
+
       <div class="panel">
         <h2>How the rounds fell</h2>
         <ul class="modal-body" id="final-reasons" style="padding-left:18px"></ul>
       </div>
+
+      <div class="panel" id="record-panel" hidden></div>
       <div class="menu">
         <button class="btn btn-gold" id="btn-rematch">Rematch</button>
         <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
@@ -588,6 +592,46 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .pill.win-a { border-color: rgba(212,160,23,.55); color: var(--gold-lift); background: rgba(212,160,23,.1); }
 .pill.win-b { border-color: rgba(247,243,233,.5); color: var(--ivory); background: rgba(247,243,233,.08); }
 .pill.draw { border-style: dashed; }
+
+/* -------------------------------------------------------------------- grade */
+
+.grade-block + .grade-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(247,243,233,.1); }
+.grade-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.grade-accuracy {
+  font-family: var(--ui-font); font-weight: 800; font-size: 30px;
+  line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.grade-accuracy span { font-size: 13px; font-weight: 600; color: rgba(247,243,233,.5); margin-left: 6px; }
+.grade-letter {
+  font-family: var(--ui-font); font-weight: 800; font-size: 36px;
+  min-width: 74px; height: 74px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  color: var(--gold-lift);
+  background: rgba(212,160,23,.12);
+  border: 1px solid rgba(212,160,23,.45);
+  flex: 0 0 auto;
+}
+.grade-note { font-size: 13.5px; line-height: 1.55; color: rgba(247,243,233,.72); margin: 12px 0 0; }
+.grade-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 16px;
+}
+.grade-stats span {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 11px; color: rgba(247,243,233,.55); line-height: 1.25;
+}
+.grade-stats b {
+  font-family: var(--ui-font); font-size: 17px; color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+}
+.record-stats { margin-top: 12px; }
+
+@media (max-width: 380px) {
+  .grade-stats { grid-template-columns: repeat(2, 1fr); }
+  .grade-letter { font-size: 30px; min-width: 62px; height: 62px; }
+  .grade-accuracy { font-size: 26px; }
+}
 
 /* ----------------------------------------------------------------- tutorial */
 
@@ -1354,9 +1398,30 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     return scored[0].action;
   }
 
+  /**
+   * Score every legal action from the mover's point of view, strongest first.
+   * Deterministic — no randomness — because this is what the grader judges a
+   * human move against, and a grade must never change between two identical games.
+   */
+  function scoreActions(state, depth) {
+    var mover = state.awaitingCapture || state.turn;
+    var actions = E.legalActions(state);
+    if (!actions.length) return [];
+    var cfg = LEVELS.hard;
+    var budget = { nodes: 0, limit: 40000 };
+    var d = depth || 2;
+
+    return actions.map(function (action) {
+      var next = E.clone(state);
+      E.apply(next, action);
+      return { action: action, value: search(next, d - 1, -Infinity, Infinity, mover, cfg, budget) };
+    }).sort(function (x, y) { return y.value - x.value; });
+  }
+
   KZ.AI = {
     LEVELS: LEVELS,
     chooseAction: chooseAction,
+    scoreActions: scoreActions,
     evaluate: evaluate
   };
 })(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
@@ -1913,7 +1978,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 (function (KZ) {
   'use strict';
 
-  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render;
+  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade;
+
+  var cards = null;        // grading cards, one per side, for the current match
 
   var state = null;        // current match
   var view = null;         // built board
@@ -2053,6 +2120,9 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
   function applyAction(action) {
     pushHistory();
+    // judge the decision against every alternative BEFORE it is played
+    var mover = state.awaitingCapture || state.turn;
+    if (cards && cards[mover]) Gr.record(cards[mover], action, Gr.assess(state, action));
     var events = E.apply(state, action);
     handleEvents(events);
     selected = null;
@@ -2066,8 +2136,12 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     events.forEach(function (ev) {
       if (ev.type === 'place') sfx.place();
       if (ev.type === 'move') sfx.move();
-      if (ev.type === 'trio') sfx.trio();
-      if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
+      if (ev.type === 'trio') { sfx.trio(); if (cards && cards[ev.player]) cards[ev.player].trios++; }
+      if (ev.type === 'capture') {
+        sfx.capture(); R.burst(view, ev.node, ev.player);
+        if (cards && cards[ev.player]) cards[ev.player].captures++;
+        if (cards && cards[ev.victim]) cards[ev.victim].lost++;
+      }
       if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
     });
   }
@@ -2190,6 +2264,8 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       thinking = false;
       if (!action) { render(); return; }
       pushHistory();
+      var aiMover = state.awaitingCapture || state.turn;
+      if (cards && cards[aiMover]) Gr.record(cards[aiMover], action, Gr.assess(state, action));
       handleEvents(E.apply(state, action));
       render();
       scheduleAI();
@@ -2291,15 +2367,31 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   function showRoundResult() {
     if (state.matchOver) {
       sfx.win();
+      // fold this match into the lifetime record before drawing the scoreboard
+      var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : 'A';
+      if (cards && cards[me]) {
+        var s = Gr.summarise(cards[me]);
+        Gr.commitMatch({
+          won: state.matchWinner === me,
+          drawn: !state.matchWinner,
+          accuracy: s.accuracy
+        });
+      }
       renderScoreboard();
       showScreen('screen-scoreboard');
       return;
     }
     var winner = state.roundWinner;
+    var running = '';
+    var side = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : null;
+    if (side && cards[side] && cards[side].decisions >= 4) {
+      var s = Gr.summarise(cards[side]);
+      running = '<p>Your play so far: <strong>' + s.accuracyText + '</strong> accuracy · grade <strong>' + s.grade + '</strong></p>';
+    }
     openModal(
       '<h2>' + (winner ? playerName(winner) + ' wins round ' + state.round : 'Round ' + state.round + ' drawn') + '</h2>' +
       '<div class="modal-body"><p>' + state.roundReason + '</p>' +
-      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p></div>',
+      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p>' + running + '</div>',
       [{
         label: 'Next round', cls: 'btn-primary', onClick: function () {
           closeModal();
@@ -2357,6 +2449,47 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
   // ---------------------------------------------------------------- scoreboard
 
+  function gradeCardHtml(side, label) {
+    var card = cards && cards[side];
+    if (!card) return '';
+    var s = Gr.summarise(card);
+    if (!s.decisions) return '';
+    return '' +
+      '<div class="grade-block">' +
+        '<div class="grade-head">' +
+          '<div>' +
+            '<div class="eyebrow">' + label + '</div>' +
+            '<div class="grade-accuracy">' + s.accuracyText + '<span> accuracy</span></div>' +
+          '</div>' +
+          '<div class="grade-letter">' + s.grade + '</div>' +
+        '</div>' +
+        '<p class="grade-note">' + s.note + '</p>' +
+        '<div class="grade-stats">' +
+          '<span><b>' + s.bestRate + '%</b>strongest move</span>' +
+          '<span><b>' + s.decisions + '</b>real decisions</span>' +
+          '<span><b>' + s.blunders + '</b>blunders</span>' +
+          '<span><b>' + s.trios + '</b>trios scored</span>' +
+          '<span><b>' + s.captures + '</b>prisoners taken</span>' +
+          '<span><b>' + s.lost + '</b>soldiers lost</span>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function recordHtml() {
+    var rec = Gr.loadRecord();
+    if (!rec.played) return '';
+    var avg = Gr.averageAccuracy(rec);
+    return '' +
+      '<div class="grade-stats record-stats">' +
+        '<span><b>' + rec.played + '</b>matches</span>' +
+        '<span><b>' + rec.won + '</b>won</span>' +
+        '<span><b>' + rec.lost + '</b>lost</span>' +
+        '<span><b>' + (avg === null ? '—' : Math.round(avg) + '%') + '</b>average</span>' +
+        '<span><b>' + (rec.bestAccuracy === null ? '—' : Math.round(rec.bestAccuracy) + '%') + '</b>best ever</span>' +
+        '<span><b>' + rec.bestStreak + '</b>best streak</span>' +
+      '</div>';
+  }
+
   function renderScoreboard() {
     $('#final-line').textContent = state.matchWinner
       ? playerName(state.matchWinner) + ' wins the match'
@@ -2376,6 +2509,21 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       return '<li>Round ' + r.round + ': ' + r.reason + '</li>';
     }).join('');
     R.emblem($('#final-emblem'));
+
+    // How well you played, win or lose.
+    var grades = '';
+    if (state.mode === 'ai') {
+      grades = gradeCardHtml(state.aiSide === 'A' ? 'B' : 'A', 'How you played');
+    } else {
+      grades = gradeCardHtml('A', playerName('A') + ' — how they played') +
+               gradeCardHtml('B', playerName('B') + ' — how they played');
+    }
+    $('#grade-panel').innerHTML = grades;
+    $('#grade-panel').hidden = !grades;
+
+    var rec = recordHtml();
+    $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec : '';
+    $('#record-panel').hidden = !rec;
   }
 
   // ------------------------------------------------------------------ tutorial
@@ -2473,6 +2621,11 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     selected = null;
     staged = null;
     thinking = false;
+    // Grade the human side(s) only — judging the AI against itself costs time
+    // and tells nobody anything.
+    cards = {};
+    if (settings.mode === 'ai') cards[state.aiSide === 'A' ? 'B' : 'A'] = Gr.newCard();
+    else { cards.A = Gr.newCard(); cards.B = Gr.newCard(); }
     if (!view) view = R.build($('#board'), onPick);
     if (view.soldier.B !== settings.opponent) R.setSoldiers(view, { A: 'gold', B: settings.opponent });
     // Do NOT reset view.owners here: it is the record of what is actually drawn.

@@ -147,9 +147,30 @@
     return scored[0].action;
   }
 
+  /**
+   * Score every legal action from the mover's point of view, strongest first.
+   * Deterministic — no randomness — because this is what the grader judges a
+   * human move against, and a grade must never change between two identical games.
+   */
+  function scoreActions(state, depth) {
+    var mover = state.awaitingCapture || state.turn;
+    var actions = E.legalActions(state);
+    if (!actions.length) return [];
+    var cfg = LEVELS.hard;
+    var budget = { nodes: 0, limit: 40000 };
+    var d = depth || 2;
+
+    return actions.map(function (action) {
+      var next = E.clone(state);
+      E.apply(next, action);
+      return { action: action, value: search(next, d - 1, -Infinity, Infinity, mover, cfg, budget) };
+    }).sort(function (x, y) { return y.value - x.value; });
+  }
+
   KZ.AI = {
     LEVELS: LEVELS,
     chooseAction: chooseAction,
+    scoreActions: scoreActions,
     evaluate: evaluate
   };
 })(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));

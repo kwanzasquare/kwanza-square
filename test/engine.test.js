@@ -10,12 +10,12 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const sandbox = { window: {}, Math: Math, console: console };
 vm.createContext(sandbox);
-['geometry.js', 'engine.js', 'ai.js'].forEach(function (f) {
+['geometry.js', 'engine.js', 'ai.js', 'grade.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sandbox, { filename: f });
 });
 
 const KZ = sandbox.window.KZ;
-const G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI;
+const G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, Gr = KZ.Grade;
 
 let failures = 0;
 function check(name, cond, detail) {
@@ -346,6 +346,88 @@ console.log('\nHow much room the board has, by pawn count');
 
 // Soldier colourways live in render.js, which needs a DOM — they are verified
 // in the browser rather than here.
+
+console.log('\nGrading a player\'s thinking');
+{
+  // The grade must be deterministic, must reward the strongest move, and must
+  // refuse to judge decisions that carry no information.
+  function playGraded(pick, games) {
+    const cards = [];
+    for (let i = 0; i < games; i++) {
+      const s = E.createMatch({ mode: 'local' });
+      const card = Gr.newCard();
+      let acts = 0;
+      while (!s.roundOver && acts++ < 2500) {
+        const mover = s.awaitingCapture || s.turn;
+        const legal = E.legalActions(s);
+        if (!legal.length) break;
+        const action = mover === 'A' ? pick(s, legal) : legal[Math.floor(Math.random() * legal.length)];
+        if (mover === 'A') Gr.record(card, action, Gr.assess(s, action));
+        E.apply(s, action);
+      }
+      cards.push(Gr.summarise(card));
+    }
+    return cards;
+  }
+
+  const perfect = (s) => AI.scoreActions(s, Gr.GRADE_DEPTH)[0].action;
+  const awful = (s) => { const r = AI.scoreActions(s, Gr.GRADE_DEPTH); return r[r.length - 1].action; };
+  const random = (s, legal) => legal[Math.floor(Math.random() * legal.length)];
+
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+
+  const best = playGraded(perfect, 3).map(c => c.accuracy);
+  const worst = playGraded(awful, 3).map(c => c.accuracy);
+  const mid = playGraded(random, 3).map(c => c.accuracy);
+
+  console.log('       always the engine\'s top move : ' + Math.round(mean(best)) + '%');
+  console.log('       random legal moves ..........: ' + Math.round(mean(mid)) + '%');
+  console.log('       always the worst move .......: ' + Math.round(mean(worst)) + '%');
+
+  check('playing the strongest move every time scores ~100%', mean(best) > 97, Math.round(mean(best)) + '%');
+  check('playing the worst move every time scores ~0%', mean(worst) < 3, Math.round(mean(worst)) + '%');
+  check('random play lands between the two',
+    mean(mid) > mean(worst) + 10 && mean(mid) < mean(best) - 10, Math.round(mean(mid)) + '%');
+
+  // determinism: the same game graded twice must give the same number
+  const s1 = E.createMatch({ mode: 'local' });
+  const c1 = Gr.newCard(), c2 = Gr.newCard();
+  const replay = [];
+  let n = 0;
+  while (!s1.roundOver && n++ < 400) {
+    const legal = E.legalActions(s1);
+    if (!legal.length) break;
+    const a = legal[0];
+    replay.push(a);
+    Gr.record(c1, a, Gr.assess(s1, a));
+    E.apply(s1, a);
+  }
+  const s2 = E.createMatch({ mode: 'local' });
+  replay.forEach(a => { Gr.record(c2, a, Gr.assess(s2, a)); E.apply(s2, a); });
+  check('the same game always earns the same grade',
+    Gr.summarise(c1).accuracyText === Gr.summarise(c2).accuracyText,
+    Gr.summarise(c1).accuracyText + ' vs ' + Gr.summarise(c2).accuracyText);
+
+  // a forced decision must not be counted as a perfect one
+  const forced = E.createMatch({ mode: 'local' });
+  forced.phase = 'movement'; forced.toPlace = { A: 0, B: 0 };
+  forced.board = new Array(24).fill(null);
+  forced.board[0] = 'A'; forced.board[7] = 'B';
+  forced.onBoard = { A: 1, B: 1 };
+  forced.turn = 'A';
+  const only = E.allMoves(forced, 'A');
+  const card = Gr.newCard();
+  if (only.length === 1) {
+    Gr.record(card, { type: 'move', from: only[0].from, to: only[0].to }, Gr.assess(forced, { type: 'move', from: only[0].from, to: only[0].to }));
+    check('a decision with only one legal option is not graded', card.decisions === 0 && card.skipped === 1);
+  } else {
+    check('a decision with only one legal option is not graded', true, 'skipped: position had ' + only.length + ' moves');
+  }
+
+  check('the move list is recorded for later verification',
+    Gr.summarise(c1).moves.length === replay.length,
+    Gr.summarise(c1).moves.length + ' of ' + replay.length);
+}
 
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');
 process.exit(failures ? 1 : 0);

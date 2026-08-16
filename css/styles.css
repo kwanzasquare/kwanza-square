@@ -385,6 +385,46 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .pill.win-b { border-color: rgba(247,243,233,.5); color: var(--ivory); background: rgba(247,243,233,.08); }
 .pill.draw { border-style: dashed; }
 
+/* -------------------------------------------------------------------- grade */
+
+.grade-block + .grade-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(247,243,233,.1); }
+.grade-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.grade-accuracy {
+  font-family: var(--ui-font); font-weight: 800; font-size: 30px;
+  line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.grade-accuracy span { font-size: 13px; font-weight: 600; color: rgba(247,243,233,.5); margin-left: 6px; }
+.grade-letter {
+  font-family: var(--ui-font); font-weight: 800; font-size: 36px;
+  min-width: 74px; height: 74px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  color: var(--gold-lift);
+  background: rgba(212,160,23,.12);
+  border: 1px solid rgba(212,160,23,.45);
+  flex: 0 0 auto;
+}
+.grade-note { font-size: 13.5px; line-height: 1.55; color: rgba(247,243,233,.72); margin: 12px 0 0; }
+.grade-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 16px;
+}
+.grade-stats span {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 11px; color: rgba(247,243,233,.55); line-height: 1.25;
+}
+.grade-stats b {
+  font-family: var(--ui-font); font-size: 17px; color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+}
+.record-stats { margin-top: 12px; }
+
+@media (max-width: 380px) {
+  .grade-stats { grid-template-columns: repeat(2, 1fr); }
+  .grade-letter { font-size: 30px; min-width: 62px; height: 62px; }
+  .grade-accuracy { font-size: 26px; }
+}
+
 /* ----------------------------------------------------------------- tutorial */
 
 .tutorial-card { width: min(100%, 480px); }

@@ -2,7 +2,9 @@
 (function (KZ) {
   'use strict';
 
-  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render;
+  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade;
+
+  var cards = null;        // grading cards, one per side, for the current match
 
   var state = null;        // current match
   var view = null;         // built board
@@ -142,6 +144,9 @@
 
   function applyAction(action) {
     pushHistory();
+    // judge the decision against every alternative BEFORE it is played
+    var mover = state.awaitingCapture || state.turn;
+    if (cards && cards[mover]) Gr.record(cards[mover], action, Gr.assess(state, action));
     var events = E.apply(state, action);
     handleEvents(events);
     selected = null;
@@ -155,8 +160,12 @@
     events.forEach(function (ev) {
       if (ev.type === 'place') sfx.place();
       if (ev.type === 'move') sfx.move();
-      if (ev.type === 'trio') sfx.trio();
-      if (ev.type === 'capture') { sfx.capture(); R.burst(view, ev.node, ev.player); }
+      if (ev.type === 'trio') { sfx.trio(); if (cards && cards[ev.player]) cards[ev.player].trios++; }
+      if (ev.type === 'capture') {
+        sfx.capture(); R.burst(view, ev.node, ev.player);
+        if (cards && cards[ev.player]) cards[ev.player].captures++;
+        if (cards && cards[ev.victim]) cards[ev.victim].lost++;
+      }
       if (ev.type === 'round-over') setTimeout(showRoundResult, 620);
     });
   }
@@ -279,6 +288,8 @@
       thinking = false;
       if (!action) { render(); return; }
       pushHistory();
+      var aiMover = state.awaitingCapture || state.turn;
+      if (cards && cards[aiMover]) Gr.record(cards[aiMover], action, Gr.assess(state, action));
       handleEvents(E.apply(state, action));
       render();
       scheduleAI();
@@ -380,15 +391,31 @@
   function showRoundResult() {
     if (state.matchOver) {
       sfx.win();
+      // fold this match into the lifetime record before drawing the scoreboard
+      var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : 'A';
+      if (cards && cards[me]) {
+        var s = Gr.summarise(cards[me]);
+        Gr.commitMatch({
+          won: state.matchWinner === me,
+          drawn: !state.matchWinner,
+          accuracy: s.accuracy
+        });
+      }
       renderScoreboard();
       showScreen('screen-scoreboard');
       return;
     }
     var winner = state.roundWinner;
+    var running = '';
+    var side = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : null;
+    if (side && cards[side] && cards[side].decisions >= 4) {
+      var s = Gr.summarise(cards[side]);
+      running = '<p>Your play so far: <strong>' + s.accuracyText + '</strong> accuracy · grade <strong>' + s.grade + '</strong></p>';
+    }
     openModal(
       '<h2>' + (winner ? playerName(winner) + ' wins round ' + state.round : 'Round ' + state.round + ' drawn') + '</h2>' +
       '<div class="modal-body"><p>' + state.roundReason + '</p>' +
-      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p></div>',
+      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p>' + running + '</div>',
       [{
         label: 'Next round', cls: 'btn-primary', onClick: function () {
           closeModal();
@@ -446,6 +473,47 @@
 
   // ---------------------------------------------------------------- scoreboard
 
+  function gradeCardHtml(side, label) {
+    var card = cards && cards[side];
+    if (!card) return '';
+    var s = Gr.summarise(card);
+    if (!s.decisions) return '';
+    return '' +
+      '<div class="grade-block">' +
+        '<div class="grade-head">' +
+          '<div>' +
+            '<div class="eyebrow">' + label + '</div>' +
+            '<div class="grade-accuracy">' + s.accuracyText + '<span> accuracy</span></div>' +
+          '</div>' +
+          '<div class="grade-letter">' + s.grade + '</div>' +
+        '</div>' +
+        '<p class="grade-note">' + s.note + '</p>' +
+        '<div class="grade-stats">' +
+          '<span><b>' + s.bestRate + '%</b>strongest move</span>' +
+          '<span><b>' + s.decisions + '</b>real decisions</span>' +
+          '<span><b>' + s.blunders + '</b>blunders</span>' +
+          '<span><b>' + s.trios + '</b>trios scored</span>' +
+          '<span><b>' + s.captures + '</b>prisoners taken</span>' +
+          '<span><b>' + s.lost + '</b>soldiers lost</span>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function recordHtml() {
+    var rec = Gr.loadRecord();
+    if (!rec.played) return '';
+    var avg = Gr.averageAccuracy(rec);
+    return '' +
+      '<div class="grade-stats record-stats">' +
+        '<span><b>' + rec.played + '</b>matches</span>' +
+        '<span><b>' + rec.won + '</b>won</span>' +
+        '<span><b>' + rec.lost + '</b>lost</span>' +
+        '<span><b>' + (avg === null ? '—' : Math.round(avg) + '%') + '</b>average</span>' +
+        '<span><b>' + (rec.bestAccuracy === null ? '—' : Math.round(rec.bestAccuracy) + '%') + '</b>best ever</span>' +
+        '<span><b>' + rec.bestStreak + '</b>best streak</span>' +
+      '</div>';
+  }
+
   function renderScoreboard() {
     $('#final-line').textContent = state.matchWinner
       ? playerName(state.matchWinner) + ' wins the match'
@@ -465,6 +533,21 @@
       return '<li>Round ' + r.round + ': ' + r.reason + '</li>';
     }).join('');
     R.emblem($('#final-emblem'));
+
+    // How well you played, win or lose.
+    var grades = '';
+    if (state.mode === 'ai') {
+      grades = gradeCardHtml(state.aiSide === 'A' ? 'B' : 'A', 'How you played');
+    } else {
+      grades = gradeCardHtml('A', playerName('A') + ' — how they played') +
+               gradeCardHtml('B', playerName('B') + ' — how they played');
+    }
+    $('#grade-panel').innerHTML = grades;
+    $('#grade-panel').hidden = !grades;
+
+    var rec = recordHtml();
+    $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec : '';
+    $('#record-panel').hidden = !rec;
   }
 
   // ------------------------------------------------------------------ tutorial
@@ -562,6 +645,11 @@
     selected = null;
     staged = null;
     thinking = false;
+    // Grade the human side(s) only — judging the AI against itself costs time
+    // and tells nobody anything.
+    cards = {};
+    if (settings.mode === 'ai') cards[state.aiSide === 'A' ? 'B' : 'A'] = Gr.newCard();
+    else { cards.A = Gr.newCard(); cards.B = Gr.newCard(); }
     if (!view) view = R.build($('#board'), onPick);
     if (view.soldier.B !== settings.opponent) R.setSoldiers(view, { A: 'gold', B: settings.opponent });
     // Do NOT reset view.owners here: it is the record of what is actually drawn.
