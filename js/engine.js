@@ -34,6 +34,9 @@
       difficulty: opts.difficulty || 'normal',
       names: opts.names || { A: 'Gold', B: 'Black' },
       pawnsPerSide: opts.pawns || PAWNS_PER_SIDE,
+      // 2 = best of three (the standard match). 1 = a single-round Quick Match,
+      // for someone who has a few minutes rather than a quarter of an hour.
+      roundsToWin: opts.roundsToWin || ROUNDS_TO_WIN,
       round: 1,
       scores: { A: 0, B: 0 },
       roundHistory: [],
@@ -67,7 +70,8 @@
   function clone(state) {
     return {
       mode: state.mode, aiSide: state.aiSide, difficulty: state.difficulty,
-      names: state.names, pawnsPerSide: state.pawnsPerSide, round: state.round,
+      names: state.names, pawnsPerSide: state.pawnsPerSide,
+      roundsToWin: state.roundsToWin, round: state.round,
       scores: { A: state.scores.A, B: state.scores.B },
       roundHistory: state.roundHistory.slice(),
       matchOver: state.matchOver, matchWinner: state.matchWinner,
@@ -329,7 +333,7 @@
     log(state, 'Round ' + state.round + ': ' + (winner ? label(state, winner) + ' wins. ' : 'Drawn. ') + reason);
     events.push({ type: 'round-over', winner: winner, reason: reason });
 
-    if (winner && state.scores[winner] >= ROUNDS_TO_WIN) {
+    if (winner && state.scores[winner] >= (state.roundsToWin || ROUNDS_TO_WIN)) {
       state.matchOver = true;
       state.matchWinner = winner;
       log(state, label(state, winner) + ' takes the match ' + state.scores[winner] + '–' + state.scores[other(winner)] + '.');

@@ -27,6 +27,7 @@
       <div class="menu">
         <button class="btn btn-primary" id="btn-play">Play</button>
         <button class="btn" id="btn-tutorial">How to play</button>
+        <button class="btn" id="btn-tv">Play on TV</button>
         <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
       </div>
     </div>
@@ -81,6 +82,15 @@
           <button class="swatch" data-opponent="ivory"><span class="dot"></span>Ivory</button>
           <button class="swatch" data-opponent="onyx"><span class="dot"></span>Onyx</button>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>Match length</h2>
+        <div class="seg">
+          <button class="btn btn-sm" data-rounds="2">Best of 3</button>
+          <button class="btn btn-sm" data-rounds="1">Quick match</button>
+        </div>
+        <p class="hint" id="rounds-hint"></p>
       </div>
 
       <div class="panel">
@@ -190,6 +200,19 @@
         <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
       </div>
     </div>
+  </section>
+
+  <!-- --------------------------------------------- the big screen (TV) -->
+  <!-- Shown only on the television. It is a display: every move is played on
+       the phone and pushed here. -->
+  <section class="screen" id="screen-tv">
+    <div class="tv-scores">
+      <span class="tv-side"><span class="chip-pawn" id="tv-chip-a"></span><span id="tv-name-a">Gold</span></span>
+      <span class="tv-score" id="tv-score">0 – 0</span>
+      <span class="tv-side right"><span class="chip-pawn" id="tv-chip-b"></span><span id="tv-name-b">Jade</span></span>
+    </div>
+    <div class="tv-board"><svg id="tv-board"></svg></div>
+    <div class="tv-prompt" id="tv-prompt">Waiting for the phone…</div>
   </section>
 
   <!-- ------------------------------------------------------------- modal -->

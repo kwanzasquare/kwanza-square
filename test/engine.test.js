@@ -355,6 +355,31 @@ console.log('\nHow much room the board has, by pawn count');
   check('default is now 9', E.createMatch({}).toPlace.A === 9);
 }
 
+console.log('\nQuick match — one round decides it');
+{
+  function decideOneRound(roundsToWin) {
+    const s = E.createMatch({ mode: 'local', roundsToWin });
+    s.phase = 'movement'; s.toPlace = { A: 0, B: 0 };
+    s.board = new Array(24).fill(null);
+    s.board[8] = 'A'; s.board[9] = 'A'; s.board[11] = 'A'; s.board[16] = 'B';
+    s.onBoard = { A: 3, B: 1 };
+    s.movesMade = { A: 1, B: 1 };
+    s.turn = 'A';
+    E.apply(s, { type: 'move', from: 11, to: 10 });   // trio
+    E.apply(s, { type: 'capture', node: 16 });        // wipes B out
+    return s;
+  }
+  const quick = decideOneRound(1);
+  check('a quick match ends after a single round',
+    quick.roundOver && quick.matchOver && quick.matchWinner === 'A',
+    JSON.stringify({ over: quick.matchOver, scores: quick.scores }));
+
+  const full = decideOneRound(2);
+  check('best of three does NOT end on the first round',
+    full.roundOver && !full.matchOver, JSON.stringify(full.scores));
+  check('best of three remains the default', E.createMatch({}).roundsToWin === 2);
+}
+
 // Soldier colourways live in render.js, which needs a DOM — they are verified
 // in the browser rather than here.
 

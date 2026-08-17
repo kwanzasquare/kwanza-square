@@ -21,6 +21,7 @@
     mode: 'ai',
     opponent: 'jade',    // colourway for the second side; gold is fixed
     pawns: 9,            // Martin's revised ruling
+    roundsToWin: 2,      // 2 = best of three · 1 = single-round Quick Match
     v: 2                 // settings version, for one-time migrations
   };
 
@@ -312,7 +313,9 @@
     $('#chip-a').style.background = R.chipStyle('gold');
     $('#chip-b').style.background = R.chipStyle(settings.opponent);
     $('#score-value').textContent = state.scores.A + ' – ' + state.scores.B;
-    $('#score-round').textContent = 'Round ' + state.round + ' · best of 3';
+    $('#score-round').textContent = state.roundsToWin === 1
+      ? 'Quick match · one round'
+      : 'Round ' + state.round + ' · best of 3';
 
     var pawnsA = state.phase === 'placement'
       ? state.toPlace.A + ' to place'
@@ -363,6 +366,8 @@
         ? playerName(state.turn) + ': choose a soldier.'
         : 'Step to a glowing intersection.';
     }
+
+    pushToTv();
 
     $('#btn-undo').disabled = !history.length || thinking || state.matchOver;
     var confirmBtn = $('#btn-confirm');
@@ -455,7 +460,9 @@
     '</ul>' +
     '<h3>Winning</h3><ul>' +
     '<li>A round ends when a side has no soldiers left, or cannot move.</li>' +
-    '<li>The match is best of three.</li>' +
+    '<li>' + (settings.roundsToWin === 1
+      ? 'This is a quick match — one round decides it.'
+      : 'The match is best of three.') + '</li>' +
     '</ul></div>';
   }
 
@@ -632,6 +639,107 @@
     });
   }
 
+  // ------------------------------------------------------ the big screen (TV)
+  //
+  // A web page cannot mirror a phone's screen by itself — that is an operating
+  // system capability and no site is allowed to trigger it. What a page CAN do
+  // is ask a nearby Cast device to open a copy of itself and then drive it.
+  //
+  // So the television runs the same page with ?tv=1, which turns it into a
+  // display: no menus, no taps, just the board. Every move made on the phone is
+  // pushed across. Where Presentation isn't supported (Safari, iOS) we explain
+  // AirPlay or Smart View instead of pretending.
+
+  var tvConnection = null;
+  var tvView = null;
+
+  function isTvReceiver() {
+    return /[?&]tv=1/.test(location.search) ||
+      !!(navigator.presentation && navigator.presentation.receiver);
+  }
+
+  function initTvReceiver() {
+    showScreen('screen-tv');
+    tvView = R.build($('#tv-board'), null);
+    R.update(tvView, { board: new Array(24).fill(null) });
+    // A seam so the display can be exercised without a Cast device in the room.
+    KZ.TvDisplay = { paint: paintTv };
+
+    if (navigator.presentation && navigator.presentation.receiver) {
+      navigator.presentation.receiver.connectionList.then(function (list) {
+        list.connections.forEach(listen);
+        list.addEventListener('connectionavailable', function (ev) { listen(ev.connection); });
+      });
+    }
+    function listen(conn) {
+      conn.addEventListener('message', function (ev) {
+        try { paintTv(JSON.parse(ev.data)); } catch (e) {}
+      });
+    }
+  }
+
+  function paintTv(m) {
+    if (!tvView) return;
+    if (tvView.soldier.B !== m.colour) R.setSoldiers(tvView, { A: 'gold', B: m.colour });
+    R.update(tvView, {
+      board: m.board, trios: m.trios, scored: m.scored, lastMove: m.lastMove
+    });
+    $('#tv-name-a').textContent = m.nameA;
+    $('#tv-name-b').textContent = m.nameB;
+    $('#tv-score').textContent = m.score;
+    $('#tv-prompt').textContent = m.prompt;
+    $('#tv-chip-a').style.background = R.chipStyle('gold');
+    $('#tv-chip-b').style.background = R.chipStyle(m.colour);
+  }
+
+  /** Push the current position to the television, if one is connected. */
+  function pushToTv() {
+    if (!tvConnection || !state) return;
+    try {
+      tvConnection.send(JSON.stringify({
+        board: state.board,
+        trios: state.activeTrios,
+        scored: state.scoredTrios,
+        lastMove: state.lastMove[E.other(state.turn)] || null,
+        colour: settings.opponent,
+        nameA: playerName('A'),
+        nameB: playerName('B'),
+        score: state.scores.A + ' – ' + state.scores.B,
+        prompt: $('#prompt-text').textContent
+      }));
+    } catch (e) { /* the set was switched off, or the connection dropped */ }
+  }
+
+  function connectTv() {
+    if (!window.PresentationRequest) return castHelp();
+    var url = location.pathname + (location.search ? location.search + '&' : '?') + 'tv=1';
+    var request;
+    try { request = new PresentationRequest([url]); } catch (e) { return castHelp(); }
+
+    request.start().then(function (conn) {
+      tvConnection = conn;
+      conn.addEventListener('close', function () { tvConnection = null; });
+      conn.addEventListener('terminate', function () { tvConnection = null; });
+      conn.addEventListener('connect', pushToTv);
+      setTimeout(pushToTv, 1200);
+      openModal('<h2>Connected to the television</h2><div class="modal-body">' +
+        '<p>The board is on the big screen. Keep playing on this phone — every move appears there.</p></div>',
+        [{ label: 'Good', cls: 'btn-gold', onClick: closeModal }]);
+    }).catch(function () {
+      castHelp();
+    });
+  }
+
+  function castHelp() {
+    openModal('<h2>Putting the game on your television</h2><div class="modal-body">' +
+      '<p>This phone can\'t hand the game to a TV by itself — only the phone\'s own screen-sharing can do that. It takes one step:</p>' +
+      '<h3>Android</h3><p>Swipe down and tap <strong>Smart View</strong> or <strong>Cast</strong>, then choose your television.</p>' +
+      '<h3>iPhone / iPad</h3><p>Swipe down and tap <strong>Screen Mirroring</strong>, then choose your Apple TV.</p>' +
+      '<h3>A smart TV with a web browser</h3><p>Open <strong>kwanzasquare.com</strong> on the television itself and play from the sofa.</p>' +
+      '<p>Once mirroring is on, the board fills the screen on its own.</p></div>',
+      [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]);
+  }
+
   // ---------------------------------------------------------------- match setup
 
   function startMatch() {
@@ -639,7 +747,8 @@
       mode: settings.mode,
       aiSide: 'B',
       difficulty: settings.difficulty,
-      pawns: settings.pawns
+      pawns: settings.pawns,
+      roundsToWin: settings.roundsToWin
     });
     history = [];
     selected = null;
@@ -689,6 +798,13 @@
       btn.setAttribute('aria-pressed', String(Number(btn.dataset.pawns) === settings.pawns));
     });
     $('#pawns-hint').textContent = PAWNS_HINT[settings.pawns] || '';
+
+    $all('[data-rounds]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.dataset.rounds) === settings.roundsToWin));
+    });
+    $('#rounds-hint').textContent = settings.roundsToWin === 1
+      ? 'One round decides the match — about 3 to 5 minutes. Best for a first game, or a short break.'
+      : 'First to win two rounds, about 8 to 12 minutes. The full game.';
     $all('[data-toggle]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(!!settings[btn.dataset.toggle]));
     });
@@ -696,6 +812,10 @@
 
   function init() {
     loadSettings();
+
+    // On the television this page is a display, not a game. Nothing else runs.
+    if (isTvReceiver()) { initTvReceiver(); return; }
+
     R.emblem($('#home-emblem'));
 
     // home
@@ -704,6 +824,7 @@
       tutorialIndex = 0; showScreen('screen-tutorial'); renderTutorial();
     });
     $('#btn-rules-home').addEventListener('click', showRules);
+    $('#btn-tv').addEventListener('click', connectTv);
 
     // mode select
     $all('[data-mode]').forEach(function (btn) {
@@ -719,6 +840,12 @@
     $all('[data-pawns]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         settings.pawns = Number(btn.dataset.pawns);
+        saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-rounds]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        settings.roundsToWin = Number(btn.dataset.rounds);
         saveSettings(); syncModeUI();
       });
     });
