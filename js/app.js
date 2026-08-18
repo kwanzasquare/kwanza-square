@@ -80,7 +80,9 @@
     trio:    function () { tone(660, 0.16, 'sine', 0.07); setTimeout(function () { tone(880, 0.2, 'sine', 0.06); }, 110); },
     capture: function () { tone(180, 0.24, 'sawtooth', 0.05); },
     deny:    function () { tone(120, 0.16, 'square', 0.04); },
-    win:     function () { [523, 659, 784, 1046].forEach(function (f, i) { setTimeout(function () { tone(f, 0.24, 'sine', 0.06); }, i * 130); }); }
+    win:     function () { [523, 659, 784, 1046, 1318].forEach(function (f, i) { setTimeout(function () { tone(f, 0.30, 'sine', 0.06); }, i * 120); }); },
+    roundWin: function () { [659, 880].forEach(function (f, i) { setTimeout(function () { tone(f, 0.20, 'sine', 0.06); }, i * 110); }); },
+    defeat:  function () { [330, 262, 196].forEach(function (f, i) { setTimeout(function () { tone(f, 0.34, 'triangle', 0.045); }, i * 150); }); }
   };
 
   function showScreen(id) {
@@ -377,8 +379,11 @@
 
   // -------------------------------------------------------------------- modals
 
-  function openModal(html, actions) {
+  function openModal(html, actions, mood) {
     var body = $('#modal-body');
+    var card = $('#modal-backdrop').querySelector('.modal');
+    card.classList.remove('won', 'lost');
+    if (mood) card.classList.add(mood);
     body.innerHTML = html;
     var bar = $('#modal-actions');
     bar.innerHTML = '';
@@ -394,44 +399,63 @@
   function closeModal() { $('#modal-backdrop').classList.remove('open'); }
 
   function showRoundResult() {
+    // Whose victory is it, from the player's point of view? Against the AI that
+    // is the human side; with two people on one phone somebody in the room won
+    // either way, so it is always a celebration.
+    var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : null;
+    var winner = state.matchOver ? state.matchWinner : state.roundWinner;
+    var playerWon = !me || winner === me;
+    var mood = !winner ? null : (playerWon ? 'won' : 'lost');
+
     if (state.matchOver) {
-      sfx.win();
-      // fold this match into the lifetime record before drawing the scoreboard
-      var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : 'A';
-      if (cards && cards[me]) {
-        var s = Gr.summarise(cards[me]);
-        Gr.commitMatch({
-          won: state.matchWinner === me,
-          drawn: !state.matchWinner,
-          accuracy: s.accuracy
-        });
+      if (cards && cards[me || 'A']) {
+        var card = Gr.summarise(cards[me || 'A']);
+        Gr.commitMatch({ won: winner === (me || 'A'), drawn: !winner, accuracy: card.accuracy });
       }
-      renderScoreboard();
+      if (playerWon && winner) { sfx.win(); KZ.Celebrate.win(true); }
+      else if (winner) { sfx.defeat(); KZ.Celebrate.defeat(); }
+      renderScoreboard(mood);
       showScreen('screen-scoreboard');
       return;
     }
-    var winner = state.roundWinner;
-    var running = '';
-    var side = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : null;
+
+    if (winner && playerWon) { sfx.roundWin(); KZ.Celebrate.win(false); }
+    else if (winner) { sfx.defeat(); KZ.Celebrate.defeat(); }
+
+    var title = winner
+      ? (playerWon && me ? 'You take round ' + state.round : playerName(winner) + ' takes round ' + state.round)
+      : 'Round ' + state.round + ' is drawn';
+
+    var grade = '';
+    var side = me;
     if (side && cards[side] && cards[side].decisions >= 4) {
-      var s = Gr.summarise(cards[side]);
-      running = '<p>Your play so far: <strong>' + s.accuracyText + '</strong> accuracy · grade <strong>' + s.grade + '</strong></p>';
+      var g = Gr.summarise(cards[side]);
+      grade = '<div class="result-grade">Your play so far: <b>' + g.accuracyText +
+        '</b> accuracy · grade <b>' + g.grade + '</b></div>';
     }
+
     openModal(
-      '<h2>' + (winner ? playerName(winner) + ' wins round ' + state.round : 'Round ' + state.round + ' drawn') + '</h2>' +
-      '<div class="modal-body"><p>' + state.roundReason + '</p>' +
-      '<p><strong>' + state.scores.A + ' – ' + state.scores.B + '</strong> in the match.</p>' + running + '</div>',
+      '<div class="result-head">' +
+        '<svg class="result-crest" id="round-crest" aria-hidden="true"></svg>' +
+        '<div class="result-title">' + title + '</div>' +
+        '<p class="result-reason">' + state.roundReason + '</p>' +
+        '<div class="result-tally">' + state.scores.A + ' – ' + state.scores.B + '</div>' +
+        grade +
+      '</div>',
       [{
-        label: 'Next round', cls: 'btn-primary', onClick: function () {
+        label: 'Next round', cls: playerWon ? 'btn-gold' : 'btn-primary', onClick: function () {
           closeModal();
+          KZ.Celebrate.stop();
           E.nextRound(state);
           history = [];
           selected = null; staged = null;
           render();
           scheduleAI();
         }
-      }]
+      }],
+      mood
     );
+    R.crest($('#round-crest'));
   }
 
   function rulesHtml() {
@@ -521,7 +545,10 @@
       '</div>';
   }
 
-  function renderScoreboard() {
+  function renderScoreboard(mood) {
+    var panel = $('#screen-scoreboard').querySelector('.panel');
+    panel.classList.remove('won', 'lost');
+    if (mood) panel.classList.add(mood);
     $('#final-line').textContent = state.matchWinner
       ? playerName(state.matchWinner) + ' wins the match'
       : 'Match complete';

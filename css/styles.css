@@ -607,3 +607,76 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   .action-row { flex-direction: column; }
   .board-frame { width: auto; height: 100%; }
 }
+
+/* ------------------------------------------------------- result celebration */
+
+.fx-canvas {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 60;            /* above the modal backdrop, never catching taps */
+}
+
+/* the result card takes on the mood of the outcome */
+.modal.won {
+  border-color: rgba(212,160,23,.75);
+  box-shadow: 0 24px 70px rgba(0,0,0,.75), 0 0 70px rgba(212,160,23,.28);
+}
+.modal.lost { border-color: rgba(247,243,233,.16); }
+
+.result-head { text-align: center; }
+
+.result-crest {
+  width: 92px; height: 92px;
+  margin: 2px auto 12px;
+  display: block;
+}
+.modal.won .result-crest { animation: crest-in .62s cubic-bezier(.2,1.5,.45,1) both; }
+.modal.lost .result-crest { animation: crest-settle .7s ease both; opacity: .55; filter: grayscale(.72); }
+@keyframes crest-in {
+  from { transform: scale(.3) rotate(-26deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(4deg); opacity: 1; }
+  to   { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes crest-settle {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0); opacity: .55; }
+}
+
+.result-title {
+  font-family: var(--ui-font); font-weight: 800;
+  font-size: clamp(23px, 6.4vw, 31px);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.modal.won .result-title {
+  background: linear-gradient(180deg, #FFF4D2 0%, var(--gold) 125%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: title-rise .5s .1s ease both;
+}
+.modal.lost .result-title { color: var(--ivory); animation: title-rise .5s .1s ease both; }
+@keyframes title-rise {
+  from { transform: translateY(9px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.result-reason {
+  font-size: 14px; line-height: 1.55;
+  color: rgba(247,243,233,.66);
+  margin: 8px 0 0;
+}
+
+.result-tally {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  margin: 16px 0 4px;
+  font-family: var(--ui-font); font-weight: 800;
+  font-size: 30px; letter-spacing: .05em;
+  font-variant-numeric: tabular-nums;
+}
+.modal.won .result-tally { color: var(--gold-lift); }
+
+.result-grade {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(247,243,233,.1);
+  font-size: 13.5px; color: rgba(247,243,233,.72);
+}
+.result-grade b { color: var(--ivory); font-size: 15px; }

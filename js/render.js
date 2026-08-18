@@ -529,9 +529,20 @@
     return 'radial-gradient(circle at 35% 30%, ' + s.light + ', ' + s.mid + ' 62%, ' + s.dark + ')';
   }
 
+  /** Just the sacred medallion, framed as a badge for the result card. */
+  function crest(svg) {
+    var prefix = 'kz' + (++uid);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', '358 358 284 284');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    defs(svg, prefix);
+    drawCenter(svg, prefix);
+  }
+
   KZ.Render = {
     BOARD: BOARD,
     SOLDIERS: SOLDIERS,
+    crest: crest,
     build: build,
     update: update,
     setSoldiers: setSoldiers,
