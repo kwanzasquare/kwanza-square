@@ -4,7 +4,7 @@
  * AI need to know about legality lives here so both agree on the rules.
  *
  * Rules (authoritative, per Martin):
- *   - 10 pawns per side, 24 intersections, sacred centre never playable.
+ *   - 9 pawns per side, 24 intersections, sacred centre never playable.
  *   - Phase 1 placement: one pawn per intersection, a placement that would
  *     complete a trio is ILLEGAL — the player must choose another intersection.
  *     Nothing scores in Phase 1.
@@ -14,7 +14,8 @@
  *     dropped on Martin's instruction — it confused far more than it added).
  *   - A trio (3 in a straight line, never diagonal) grants the right to remove
  *     ANY one enemy pawn, including one standing inside a trio.
- *   - Round ends when a side has no pawns left, or cannot move. Best of three.
+ *   - A round ends three ways: a side is reduced below three soldiers (it can
+ *     never form a trio again), a side cannot move, or the draw limit is hit.
  */
 (function (KZ) {
   'use strict';
@@ -23,6 +24,9 @@
   var PAWNS_PER_SIDE = 9;   // Martin's revised ruling: 9 leaves the board room to breathe
   var ROUNDS_TO_WIN = 2;
   var DRAW_LIMIT = 100; // moves without a capture -> round declared a draw
+  // Martin's third ending: with only two soldiers left a side can never form a
+  // trio again, so the round is already decided. Below three is a loss.
+  var MIN_SOLDIERS = 3;
 
   function other(player) { return player === 'A' ? 'B' : 'A'; }
 
@@ -308,12 +312,13 @@
     var mover = state.turn;
     var foe = other(mover);
 
-    // A side with no soldiers left loses the round.
-    if (state.phase === 'movement' && state.onBoard[mover] === 0) {
-      return finishRound(state, foe, label(state, mover) + ' has no soldiers left.', events);
+    // A side reduced below three soldiers has lost: three is the fewest that can
+    // ever form a trio again.
+    if (state.phase === 'movement' && state.onBoard[mover] < MIN_SOLDIERS) {
+      return finishRound(state, foe, shortHanded(state, mover), events);
     }
-    if (state.phase === 'movement' && state.onBoard[foe] === 0) {
-      return finishRound(state, mover, label(state, foe) + ' has no soldiers left.', events);
+    if (state.phase === 'movement' && state.onBoard[foe] < MIN_SOLDIERS) {
+      return finishRound(state, mover, shortHanded(state, foe), events);
     }
     // A side that cannot move loses the round.
     if (state.phase === 'movement' && allMoves(state, mover).length === 0) {
@@ -322,6 +327,13 @@
     if (state.phase === 'movement' && state.movesSinceCapture >= DRAW_LIMIT) {
       return finishRound(state, null, 'No capture in ' + DRAW_LIMIT + ' moves — the round is drawn.', events);
     }
+  }
+
+  function shortHanded(state, side) {
+    var n = state.onBoard[side];
+    if (n === 0) return label(state, side) + ' has no soldiers left.';
+    return label(state, side) + ' is down to ' + (n === 1 ? 'one soldier' : 'two soldiers') +
+      ' and can never form a trio again.';
   }
 
   function finishRound(state, winner, reason, events) {
@@ -354,6 +366,7 @@
     PAWNS_PER_SIDE: PAWNS_PER_SIDE,
     ROUNDS_TO_WIN: ROUNDS_TO_WIN,
     DRAW_LIMIT: DRAW_LIMIT,
+    MIN_SOLDIERS: MIN_SOLDIERS,
     other: other,
     createMatch: createMatch,
     resetRound: resetRound,

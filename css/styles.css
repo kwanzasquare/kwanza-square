@@ -680,3 +680,74 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   font-size: 13.5px; color: rgba(247,243,233,.72);
 }
 .result-grade b { color: var(--ivory); font-size: 15px; }
+
+/* --------------------------------------------------------------- move trail */
+/* The step a soldier just took, held on the board long enough to follow —
+   without it, the AI's soldiers simply appear somewhere new. */
+/* Visible by DEFAULT, fading only at the end. An attention cue must never
+   depend on an animation having started: a paused or throttled animation with
+   an opacity-0 first keyframe leaves the trail permanently invisible. */
+.move-trail {
+  opacity: 1;
+  animation: trail-life 3.4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes trail-life {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.trail-dash { animation: trail-march 1.1s linear infinite; }
+@keyframes trail-march { to { stroke-dashoffset: -92; } }
+
+/* ----------------------------------------------------------- prisoner camps */
+
+.camps {
+  flex: 0 0 auto;
+  display: flex; gap: 8px;
+  padding: 7px 10px 0;
+}
+.camp {
+  flex: 1 1 0; min-width: 0;
+  border: 1px solid rgba(247,243,233,.14);
+  border-radius: 10px;
+  background: rgba(247,243,233,.035);
+  padding: 5px 8px 6px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.camp.right { align-items: flex-end; }
+
+.camp-label {
+  font-family: var(--accent-font);
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(247,243,233,.5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.camp-cells {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  min-height: 15px;
+}
+.camp.right .camp-cells { justify-content: flex-end; }
+
+.camp-pawn {
+  width: 15px; height: 15px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4);
+  flex: 0 0 auto;
+}
+.camp-pawn.new { animation: prisoner-in .42s cubic-bezier(.2,1.4,.5,1) both; }
+@keyframes prisoner-in {
+  from { transform: scale(.2) translateY(-14px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@media (max-width: 380px) {
+  .camp-pawn { width: 13px; height: 13px; }
+  .camp-label { font-size: 9px; }
+}
+
+/* in the landscape rail the camps stack with everything else */
+@media (orientation: landscape) and (max-height: 520px) {
+  .camps { flex-direction: column; padding: 6px 8px 0; }
+  .camp.right { align-items: flex-start; }
+  .camp.right .camp-cells { justify-content: flex-start; }
+}

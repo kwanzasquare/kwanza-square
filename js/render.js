@@ -490,6 +490,49 @@
     });
   }
 
+  /**
+   * Trace the step a soldier just took, and leave it on the board for a few
+   * seconds so the other player can see what happened — especially the AI,
+   * whose soldiers otherwise just appear somewhere new.
+   *
+   * Orchid is deliberate: it is the one hue the board never uses. Orange lines,
+   * royal blue ground, black-and-white tiles, and every soldier colourway
+   * (gold, silver, jade, crimson, ivory, onyx) all sit far from it, so the
+   * trail reads instantly whoever is playing.
+   */
+  var TRAIL = '#E86BFF';
+
+  function trail(view, from, to) {
+    var a = G.node(from), b = G.node(to);
+    var g = el('g', { class: 'move-trail' }, view.fxLayer);
+
+    // Sizes are in board units: the board renders about a third of a CSS pixel
+    // per unit on a phone, so anything thinner than ~10 units disappears.
+    el('line', {
+      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+      stroke: TRAIL, 'stroke-width': 34, 'stroke-linecap': 'round',
+      opacity: 0.5, filter: 'url(#' + view.prefix + '-glow)'
+    }, g);
+    el('line', {
+      class: 'trail-dash',
+      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+      stroke: '#FFFFFF', 'stroke-width': 12, 'stroke-linecap': 'round',
+      'stroke-dasharray': '26 20'
+    }, g);
+    // a hollow ring marks where the soldier came from
+    el('circle', {
+      cx: a.x, cy: a.y, r: 34, fill: 'none',
+      stroke: TRAIL, 'stroke-width': 9, filter: 'url(#' + view.prefix + '-glow)'
+    }, g);
+
+    // Clean up on a timer as well as on animationend: if animations are paused
+    // (a backgrounded tab) animationend never fires and trails would pile up.
+    function drop() { if (g.parentNode) g.parentNode.removeChild(g); }
+    g.addEventListener('animationend', drop, { once: true });
+    setTimeout(drop, 3800);
+    return g;
+  }
+
   /** Expanding ring where a soldier was taken. */
   function burst(view, nodeId, player) {
     var n = G.node(nodeId);
@@ -543,6 +586,8 @@
     BOARD: BOARD,
     SOLDIERS: SOLDIERS,
     crest: crest,
+    trail: trail,
+    TRAIL: TRAIL,
     build: build,
     update: update,
     setSoldiers: setSoldiers,

@@ -122,8 +122,9 @@ console.log('\nA standing trio must stop signalling once it has scored');
   // Gold holds the middle ring's NW(8) and N(9); a third soldier sits on the
   // middle E(11), one step around the ring from NE(10), which completes 8-9-10.
   s.board[8] = 'A'; s.board[9] = 'A'; s.board[11] = 'A';
-  s.board[16] = 'B'; s.board[18] = 'B'; s.board[21] = 'B';
-  s.onBoard = { A: 3, B: 3 };
+  // four for Black: losing one must not end the round under the two-soldier rule
+  s.board[16] = 'B'; s.board[18] = 'B'; s.board[21] = 'B'; s.board[23] = 'B';
+  s.onBoard = { A: 3, B: 4 };
   s.movesMade = { A: 1, B: 1 };
   s.turn = 'A';
 
@@ -212,7 +213,7 @@ console.log('\nRound and match progression');
   s.turn = 'A';
   E.apply(s, { type: 'move', from: 3, to: 2 });
   E.apply(s, { type: 'capture', node: 8 });
-  check('round ends when a side is wiped out', s.roundOver === true, s.roundReason);
+  check('round ends when a side falls below three soldiers', s.roundOver === true, s.roundReason);
   check('match ends at 2 round wins', s.matchOver === true && s.matchWinner === 'A',
     JSON.stringify(s.scores));
 }
@@ -252,8 +253,8 @@ console.log('\nKwanza AI');
   b.phase = 'movement'; b.toPlace = { A: 0, B: 0 };
   b.board = new Array(24).fill(null);
   b.board[8] = 'A'; b.board[10] = 'A'; b.board[1] = 'A';
-  b.board[17] = 'B'; b.board[20] = 'B';
-  b.onBoard = { A: 3, B: 2 };
+  b.board[17] = 'B'; b.board[20] = 'B'; b.board[22] = 'B';
+  b.onBoard = { A: 3, B: 3 };
   b.movesMade = { A: 1, B: 1 };
   b.turn = 'B';
   check('the threat is real (Gold can complete next move)',
@@ -353,6 +354,41 @@ console.log('\nHow much room the board has, by pawn count');
   const s8 = E.createMatch({ pawns: 8 });
   check('pawn count is configurable', s10.toPlace.A === 10 && s8.toPlace.A === 8);
   check('default is now 9', E.createMatch({}).toPlace.A === 9);
+}
+
+console.log('\nThe two-soldier rule (Martin\'s third ending)');
+{
+  function reduceTo(n) {
+    const s = E.createMatch({ mode: 'local' });
+    s.phase = 'movement'; s.toPlace = { A: 0, B: 0 };
+    s.board = new Array(24).fill(null);
+    s.board[8] = 'A'; s.board[9] = 'A'; s.board[11] = 'A';   // Gold completes 8-9-10
+    // Black holds n+1 soldiers, so one capture leaves exactly n
+    const spots = [16, 18, 21, 23, 19, 22];
+    for (let i = 0; i < n + 1; i++) s.board[spots[i]] = 'B';
+    s.onBoard = { A: 3, B: n + 1 };
+    s.movesMade = { A: 1, B: 1 };
+    s.turn = 'A';
+    E.apply(s, { type: 'move', from: 11, to: 10 });
+    E.apply(s, { type: 'capture', node: spots[0] });
+    return s;
+  }
+
+  const atTwo = reduceTo(2);
+  check('a side reduced to two soldiers loses the round at once',
+    atTwo.roundOver && atTwo.roundWinner === 'A', atTwo.roundReason);
+  check('the reason explains why', /two soldiers/.test(atTwo.roundReason), atTwo.roundReason);
+
+  const atThree = reduceTo(3);
+  check('three soldiers is still a live game', !atThree.roundOver,
+    atThree.roundReason || 'still playing');
+
+  check('three is the documented threshold', E.MIN_SOLDIERS === 3);
+
+  // and it must not fire during placement, when both sides are still building up
+  const early = E.createMatch({ mode: 'local' });
+  E.apply(early, { type: 'place', node: E.legalPlacements(early)[0] });
+  check('the rule never fires during placement', !early.roundOver);
 }
 
 console.log('\nQuick match — one round decides it');

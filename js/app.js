@@ -162,7 +162,7 @@
   function handleEvents(events) {
     events.forEach(function (ev) {
       if (ev.type === 'place') sfx.place();
-      if (ev.type === 'move') sfx.move();
+      if (ev.type === 'move') { sfx.move(); R.trail(view, ev.from, ev.to); }
       if (ev.type === 'trio') { sfx.trio(); if (cards && cards[ev.player]) cards[ev.player].trios++; }
       if (ev.type === 'capture') {
         sfx.capture(); R.burst(view, ev.node, ev.player);
@@ -369,12 +369,40 @@
         : 'Step to a glowing intersection.';
     }
 
+    renderCamps();
     pushToTv();
 
     $('#btn-undo').disabled = !history.length || thinking || state.matchOver;
     var confirmBtn = $('#btn-confirm');
     confirmBtn.hidden = !settings.confirm;
     confirmBtn.disabled = !staged;
+  }
+
+  /**
+   * The prisoner camps. A soldier taken off the board turns up in the captor's
+   * camp, on the captor's own side — so you can see at a glance who is winning
+   * the exchange rather than counting soldiers on the board.
+   */
+  function renderCamps() {
+    ['A', 'B'].forEach(function (side) {
+      var foe = E.other(side);
+      // prisoners this side holds = the enemy soldiers no longer on the board
+      var taken = state.phase === 'placement'
+        ? 0
+        : Math.max(0, state.pawnsPerSide - state.onBoard[foe] - state.toPlace[foe]);
+      var cells = $('#camp-cells-' + side.toLowerCase());
+      var colour = foe === 'A' ? 'gold' : settings.opponent;
+
+      while (cells.children.length > taken) cells.removeChild(cells.lastChild);
+      while (cells.children.length < taken) {
+        var dot = document.createElement('span');
+        dot.className = 'camp-pawn new';
+        dot.style.background = R.chipStyle(colour);
+        cells.appendChild(dot);
+      }
+      $('#camp-label-' + side.toLowerCase()).textContent =
+        playerName(side) + (taken === 1 ? ': 1 prisoner' : ': ' + taken + ' prisoners');
+    });
   }
 
   // -------------------------------------------------------------------- modals
@@ -483,7 +511,8 @@
     '<li>A trio lets you remove any one enemy soldier — including one standing inside a trio.</li>' +
     '</ul>' +
     '<h3>Winning</h3><ul>' +
-    '<li>A round ends when a side has no soldiers left, or cannot move.</li>' +
+    '<li>A round ends when a side is down to two soldiers — too few to ever form a trio again.</li>' +
+    '<li>It also ends if a side cannot move.</li>' +
     '<li>' + (settings.roundsToWin === 1
       ? 'This is a quick match — one round decides it.'
       : 'The match is best of three.') + '</li>' +
@@ -630,7 +659,7 @@
     },
     {
       title: 'Capture, and the match',
-      text: 'Every trio you complete lets you remove one enemy soldier — any one you like, including a soldier standing inside a trio of its own. A round ends when a side has no soldiers left or cannot move. First to two rounds takes the match.',
+      text: 'Every trio you complete lets you remove one enemy soldier — any one you like, including a soldier standing inside a trio of its own. A round ends when a side is down to two soldiers, or cannot move. First to two rounds takes the match.',
       vm: function () {
         var b = new Array(24).fill(null);
         b[8] = 'A'; b[9] = 'A'; b[10] = 'A'; b[17] = 'B'; b[20] = 'B'; b[1] = 'B';
