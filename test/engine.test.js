@@ -10,12 +10,12 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const sandbox = { window: {}, Math: Math, console: console };
 vm.createContext(sandbox);
-['geometry.js', 'engine.js', 'ai.js', 'grade.js'].forEach(function (f) {
+['geometry.js', 'engine.js', 'ai.js', 'grade.js', 'verify.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(root, 'js', f), 'utf8'), sandbox, { filename: f });
 });
 
 const KZ = sandbox.window.KZ;
-const G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, Gr = KZ.Grade;
+const G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, Gr = KZ.Grade, V = KZ.Verify;
 
 let failures = 0;
 function check(name, cond, detail) {
@@ -499,6 +499,81 @@ console.log('\nGrading a player\'s thinking');
   check('the move list is recorded for later verification',
     Gr.summarise(c1).moves.length === replay.length,
     Gr.summarise(c1).moves.length + ' of ' + replay.length);
+}
+
+console.log('\nServer-side verification of a submitted match');
+{
+  // Play a genuine match to completion, keeping the action log the engine wrote.
+  function playGenuine(level, pawns, roundsToWin) {
+    const s = E.createMatch({ mode: 'ai', aiSide: 'B', difficulty: level, pawns, roundsToWin });
+    let guard = 0;
+    while (!s.matchOver && guard++ < 8000) {
+      if (s.roundOver) { E.nextRound(s); continue; }
+      const a = AI.chooseAction(s);
+      if (!a) break;
+      E.apply(s, a);
+    }
+    return s;
+  }
+
+  const played = playGenuine('normal', 9, 2);
+  check('a real match produces an action log', played.actionLog.length > 20, played.actionLog.length);
+  check('the match actually finished', played.matchOver === true);
+
+  const submission = {
+    level: 'normal', pawns: 9, roundsToWin: 2, humanSide: 'A',
+    actionLog: played.actionLog
+  };
+  const v = V.replay(submission);
+  check('a genuine match verifies', v.ok === true, v.reason);
+  check('the replay agrees with what was played',
+    v.result === (played.matchWinner === 'A' ? 'win' : played.matchWinner ? 'loss' : 'draw'),
+    v.result + ' vs winner ' + played.matchWinner);
+  check('the replay produces a grade', v.accuracy >= 0 && v.accuracy <= 100, String(v.accuracy));
+  check('points and accuracy reconcile exactly',
+    v.points === Math.round(V.pointsFor(v.result, v.accuracy) * 1000) / 1000,
+    v.points + ' vs ' + V.pointsFor(v.result, v.accuracy));
+
+  // determinism: the same log must always give the same numbers
+  const again = V.replay(submission);
+  check('verification is deterministic',
+    again.accuracy === v.accuracy && again.points === v.points && again.result === v.result);
+
+  console.log('       genuine match: ' + played.actionLog.length + ' actions, result ' +
+    v.result + ', accuracy ' + v.accuracy + '%, points ' + v.points);
+
+  // ---- forgeries must be refused --------------------------------------
+  const forged = (mutate) => {
+    const copy = JSON.parse(JSON.stringify(submission));
+    mutate(copy);
+    return V.replay(copy);
+  };
+
+  check('an illegal move is refused',
+    forged(c => { c.actionLog[c.actionLog.length - 1] = 'm0>23'; }).ok === false);
+  check('a truncated match is refused (never finished)',
+    forged(c => { c.actionLog = c.actionLog.slice(0, 12); }).ok === false);
+  check('an empty log is refused', V.replay({ ...submission, actionLog: [] }).ok === false);
+  check('a fabricated log is refused',
+    V.replay({ ...submission, actionLog: ['p0', 'p1', 'p2'] }).ok === false);
+  check('nonsense actions are refused',
+    forged(c => { c.actionLog[3] = 'zzz'; }).ok === false);
+  check('an unknown level is refused',
+    V.replay({ ...submission, level: 'godmode' }).ok === false);
+  check('an out-of-range pawn count is refused',
+    V.replay({ ...submission, pawns: 99 }).ok === false);
+  check('an absurdly long log is refused',
+    V.replay({ ...submission, actionLog: new Array(V.MAX_ACTIONS + 1).fill('p0') }).ok === false);
+
+  // The decisive one: claiming the other side's win must not survive a replay.
+  const asLoser = V.replay({ ...submission, humanSide: 'B' });
+  check('swapping sides changes the verified result, it is not taken on trust',
+    asLoser.ok === true && asLoser.result !== v.result,
+    'A=' + v.result + ' B=' + asLoser.result);
+
+  // A player cannot inflate their grade: the server recomputes it.
+  check('the grade is recomputed, never accepted from the client',
+    V.replay({ ...submission, accuracy: 100, points: 999 }).accuracy === v.accuracy);
 }
 
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');

@@ -46,13 +46,18 @@
       roundHistory: [],
       matchOver: false,
       matchWinner: null,
-      startingPlayer: 'A'
+      startingPlayer: 'A',
+      // Every action of the whole match, in order, as compact keys. This is
+      // what a server replays to re-prove a submitted result: the client is
+      // never believed. 'R' marks the start of a new round.
+      actionLog: []
     };
     resetRound(state);
     return state;
   }
 
   function resetRound(state) {
+    if (!state.actionLog) state.actionLog = [];
     state.phase = 'placement';
     state.board = new Array(G.NODE_COUNT).fill(null);
     state.turn = state.startingPlayer;
@@ -80,6 +85,7 @@
       roundHistory: state.roundHistory.slice(),
       matchOver: state.matchOver, matchWinner: state.matchWinner,
       startingPlayer: state.startingPlayer,
+      actionLog: state.actionLog.slice(),
       phase: state.phase,
       board: state.board.slice(),
       turn: state.turn,
@@ -236,6 +242,7 @@
     if (action.type === 'place') {
       if (state.phase !== 'placement' || state.awaitingCapture) return events;
       if (state.board[action.node] !== null) return events;
+      state.actionLog.push('p' + action.node);
       state.board[action.node] = player;
       state.toPlace[player]--;
       state.onBoard[player]++;
@@ -256,6 +263,7 @@
       if (state.board[action.from] !== player) return events;
       if (legalMovesFrom(state, action.from).indexOf(action.to) === -1) return events;
 
+      state.actionLog.push('m' + action.from + '>' + action.to);
       state.board[action.from] = null;
       state.board[action.to] = player;
       state.lastMove[player] = { from: action.from, to: action.to };
@@ -282,6 +290,7 @@
       if (!state.awaitingCapture) return events;
       var taker = state.awaitingCapture;
       if (state.board[action.node] !== other(taker)) return events;
+      state.actionLog.push('x' + action.node);
       state.board[action.node] = null;
       state.onBoard[other(taker)]--;
       state.awaitingCapture = null;
@@ -358,7 +367,10 @@
     if (state.matchOver) return state;
     state.round++;
     state.startingPlayer = other(state.startingPlayer);
+    var log = state.actionLog;
     resetRound(state);
+    state.actionLog = log;
+    state.actionLog.push('R');
     return state;
   }
 

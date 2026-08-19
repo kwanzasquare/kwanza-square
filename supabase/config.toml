@@ -1,0 +1,7 @@
+project_id = "ftnrcogoynentmvoolsi"
+
+[functions.submit]
+# The game posts anonymously — there is no user login in Option A.
+# Safety does not come from a JWT here, it comes from the server replaying the
+# whole match before it will store anything.
+verify_jwt = false

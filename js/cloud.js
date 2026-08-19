@@ -1,0 +1,130 @@
+/* Kwanza Square — talking to the leaderboard.
+ *
+ * The key below is the PUBLISHABLE key. It is meant to be readable by anyone
+ * holding the game, and it grants nothing: the tables refuse it entirely (row
+ * level security with no policies), and the only things it may call are three
+ * read-only functions and the submit endpoint, which re-proves every game
+ * before storing it. There is no secret in this file and there must never be.
+ *
+ * No SDK — plain fetch, so the game keeps its "no dependencies" promise.
+ */
+(function (KZ) {
+  'use strict';
+
+  var CONFIG = {
+    url: 'https://ftnrcogoynentmvoolsi.supabase.co',
+    key: 'sb_publishable_7Bt97jGxR838TH5Iivo9xQ_AcmsSdNB'
+  };
+
+  var STORE = 'kwanza-cloud';
+  var TIMEOUT = 12000;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+  }
+  function save(patch) {
+    var s = Object.assign(load(), patch);
+    try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
+    return s;
+  }
+
+  /** A random id for this device. Not personal — it only guards handle claims. */
+  function deviceId() {
+    var s = load();
+    if (s.deviceId) return s.deviceId;
+    var id;
+    try {
+      id = crypto.randomUUID();
+    } catch (e) {
+      id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+    save({ deviceId: id });
+    return id;
+  }
+
+  function handle() { return load().handle || null; }
+  function setHandle(h) { save({ handle: h }); }
+  function forget() {
+    try { localStorage.removeItem(STORE); } catch (e) {}
+  }
+
+  function request(path, options) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, TIMEOUT);
+    return fetch(CONFIG.url + path, Object.assign({
+      signal: controller.signal,
+      headers: {
+        apikey: CONFIG.key,
+        Authorization: 'Bearer ' + CONFIG.key,
+        'Content-Type': 'application/json'
+      }
+    }, options)).then(function (res) {
+      clearTimeout(timer);
+      return res.json().catch(function () { return null; }).then(function (body) {
+        if (!res.ok) {
+          var err = new Error((body && (body.error || body.message)) || ('request failed (' + res.status + ')'));
+          err.status = res.status;
+          throw err;
+        }
+        return body;
+      });
+    }, function (e) {
+      clearTimeout(timer);
+      throw new Error(e.name === 'AbortError' ? 'The leaderboard did not answer. Check your connection.' : 'Could not reach the leaderboard.');
+    });
+  }
+
+  function rpc(fn, args) {
+    return request('/rest/v1/rpc/' + fn, { method: 'POST', body: JSON.stringify(args || {}) });
+  }
+
+  // ------------------------------------------------------------------ public
+
+  function isHandleFree(name) {
+    return rpc('handle_available', { p_handle: name });
+  }
+
+  function leaderboard(level, period, limit) {
+    return rpc('leaderboard', { p_level: level, p_period: period || 'all', p_limit: limit || 100 });
+  }
+
+  function standing(name, level, period) {
+    return rpc('my_standing', { p_handle: name, p_level: level, p_period: period || 'all' })
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  /**
+   * Send a finished match. `state` is the engine's own state — the full action
+   * log travels with it, and the server decides what actually happened.
+   */
+  function submit(state, humanSide, name) {
+    return request('/functions/v1/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        handle: name,
+        deviceId: deviceId(),
+        level: state.difficulty,
+        pawns: state.pawnsPerSide,
+        roundsToWin: state.roundsToWin,
+        humanSide: humanSide,
+        actionLog: state.actionLog
+      })
+    });
+  }
+
+  KZ.Cloud = {
+    CONFIG: CONFIG,
+    deviceId: deviceId,
+    handle: handle,
+    setHandle: setHandle,
+    forget: forget,
+    isHandleFree: isHandleFree,
+    leaderboard: leaderboard,
+    standing: standing,
+    submit: submit
+  };
+})(window.KZ = window.KZ || {});

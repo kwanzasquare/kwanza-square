@@ -2,7 +2,7 @@
 (function (KZ) {
   'use strict';
 
-  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade;
+  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade, C = KZ.Cloud;
 
   var cards = null;        // grading cards, one per side, for the current match
 
@@ -22,6 +22,7 @@
     opponent: 'jade',    // colourway for the second side; gold is fixed
     pawns: 9,            // Martin's revised ruling
     roundsToWin: 2,      // 2 = best of three · 1 = single-round Quick Match
+    arena: 'local',      // 'local' keeps everything on the phone · 'global' is ranked
     v: 2                 // settings version, for one-time migrations
   };
 
@@ -611,6 +612,19 @@
     var rec = recordHtml();
     $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec : '';
     $('#record-panel').hidden = !rec;
+
+    // Only a ranked match against the AI can go on the board: two people on one
+    // phone have no single player to credit, and a local match never leaves it.
+    var rankable = settings.arena === 'global' && state.mode === 'ai' && state.matchOver;
+    var panel = $('#submit-panel');
+    panel.hidden = !rankable;
+    if (rankable) {
+      var btn = $('#btn-submit');
+      btn.textContent = 'Submit result';
+      btn.disabled = false;
+      btn.onclick = submitMatch;
+      $('#submit-hint').textContent = 'Your whole game is sent and replayed on the server, which works out the result for itself. Nothing is taken on trust.';
+    }
   }
 
   // ------------------------------------------------------------------ tutorial
@@ -796,6 +810,140 @@
       [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]);
   }
 
+  // ------------------------------------------------------------- leaderboard
+
+  var lb = { level: 'normal', period: 'all' };
+
+  function syncLeaderboardTabs() {
+    $all('[data-lb-level]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lbLevel === lb.level));
+    });
+    $all('[data-lb-period]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lbPeriod === lb.period));
+    });
+  }
+
+  function levelName(level) {
+    return { easy: 'Beginner', normal: 'Skilled', hard: 'Master' }[level] || level;
+  }
+
+  function loadLeaderboard() {
+    syncLeaderboardTabs();
+    var rows = $('#lb-rows'), state = $('#lb-state'), you = $('#lb-you');
+    rows.innerHTML = '';
+    you.hidden = true;
+    state.hidden = false;
+    state.textContent = 'Loading…';
+
+    var mine = C.handle();
+    C.leaderboard(lb.level, lb.period, 100).then(function (list) {
+      if (!list || !list.length) {
+        state.textContent = 'No one has qualified for this board yet. Three matches puts you on it.';
+        return;
+      }
+      state.hidden = true;
+      rows.innerHTML = list.map(function (r) {
+        var isMe = mine && r.handle.toLowerCase() === mine.toLowerCase();
+        return '<li class="lb-row' + (isMe ? ' me' : '') + '">' +
+          '<span class="lb-rank">' + r.rank + '</span>' +
+          '<span class="lb-handle">' + escapeHtml(r.handle) + '</span>' +
+          '<span class="lb-rating">' + Number(r.rating).toFixed(2) + '</span>' +
+          '<span class="lb-played">' + r.matches + '</span>' +
+        '</li>';
+      }).join('');
+
+      // pin the player's own line, wherever they rank
+      if (mine && !list.some(function (r) { return r.handle.toLowerCase() === mine.toLowerCase(); })) {
+        return C.standing(mine, lb.level, lb.period).then(function (row) {
+          if (!row) return;
+          you.hidden = false;
+          you.innerHTML = '<span class="lb-rank">' + row.rank + '</span>' +
+            '<span class="lb-handle">' + escapeHtml(row.handle) + '</span>' +
+            '<span class="lb-rating">' + Number(row.rating).toFixed(2) + '</span>' +
+            '<span class="lb-played">' + row.matches + '</span>';
+        });
+      }
+    }).catch(function (err) {
+      // Never show a raw database error to a player — it is meaningless to them
+      // and it leaks how the back end is built. Keep the detail in the console.
+      console.warn('leaderboard request failed:', err);
+      state.hidden = false;
+      state.textContent = err.status === 404 || /schema cache|does not exist/i.test(err.message)
+        ? 'The leaderboard is not open yet. It arrives shortly.'
+        : 'Could not load the leaderboard just now. Please try again in a moment.';
+    });
+  }
+
+  function escapeHtml(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /** Ask for a name the first time someone submits. */
+  function askForHandle() {
+    return new Promise(function (resolve) {
+      openModal(
+        '<h2>Choose your name</h2><div class="modal-body">' +
+        '<p>This is the name that appears on the leaderboard. 3 to 16 letters, numbers or underscores.</p>' +
+        '<input id="handle-input" class="text-input" maxlength="16" autocomplete="off" ' +
+        'autocapitalize="off" spellcheck="false" placeholder="e.g. Abidjan_Ken">' +
+        '<p class="hint" id="handle-note">No email, no password — the name is all we keep.</p></div>',
+        [
+          { label: 'Cancel', onClick: function () { closeModal(); resolve(null); } },
+          { label: 'Claim it', cls: 'btn-gold', onClick: function () {
+            var input = $('#handle-input');
+            var note = $('#handle-note');
+            var name = (input.value || '').trim();
+            if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) {
+              note.textContent = '3 to 16 letters, numbers or underscores.';
+              return;
+            }
+            note.textContent = 'Checking…';
+            C.isHandleFree(name).then(function (free) {
+              if (!free) { note.textContent = 'That name is taken. Try another.'; return; }
+              C.setHandle(name);
+              closeModal();
+              resolve(name);
+            }).catch(function (e) { note.textContent = e.message; });
+          } }
+        ]
+      );
+      setTimeout(function () { var i = $('#handle-input'); if (i) i.focus(); }, 60);
+    });
+  }
+
+  function submitMatch() {
+    var btn = $('#btn-submit');
+    var hint = $('#submit-hint');
+    var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : 'A';
+
+    Promise.resolve(C.handle() || askForHandle()).then(function (name) {
+      if (!name) return;
+      btn.disabled = true;
+      hint.textContent = 'Sending the whole game for checking…';
+      return C.submit(state, me, name).then(function (res) {
+        if (res.duplicate) {
+          hint.textContent = 'This match was already on the leaderboard.';
+        } else {
+          hint.textContent = 'Verified and recorded — ' + res.result + ', ' +
+            res.accuracy + '% accuracy, ' + res.points + ' points.' +
+            (res.standing ? ' You are ranked ' + res.standing.rank + '.' : '');
+        }
+        btn.textContent = 'View leaderboard';
+        btn.disabled = false;
+        btn.onclick = function () { showScreen('screen-leaderboard'); loadLeaderboard(); };
+      });
+    }).catch(function (err) {
+      console.warn('submit failed:', err);
+      // 4xx messages are written for players; anything else is ours to hide.
+      hint.textContent = (err.status >= 400 && err.status < 500 && err.message)
+        ? err.message
+        : 'Could not reach the leaderboard just now. Your game is safe — try again shortly.';
+      btn.disabled = false;
+    });
+  }
+
   // ---------------------------------------------------------------- match setup
 
   function startMatch() {
@@ -855,6 +1003,14 @@
     });
     $('#pawns-hint').textContent = PAWNS_HINT[settings.pawns] || '';
 
+    $all('[data-arena]').forEach(function (b) {
+      b.setAttribute('aria-checked', String(b.dataset.arena === settings.arena));
+    });
+    $('#arena-hint').textContent = settings.arena === 'global'
+      ? (C.handle() ? 'Playing as ' + C.handle() + '. Finished matches against the AI can be submitted.'
+                    : 'You will pick a name when you submit your first result.')
+      : 'Nothing is sent anywhere. You can switch to Global at any time.';
+
     $all('[data-rounds]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(Number(btn.dataset.rounds) === settings.roundsToWin));
     });
@@ -881,6 +1037,16 @@
     });
     $('#btn-rules-home').addEventListener('click', showRules);
     $('#btn-tv').addEventListener('click', connectTv);
+    $('#btn-leaderboard').addEventListener('click', function () {
+      showScreen('screen-leaderboard'); loadLeaderboard();
+    });
+    $('#btn-lb-back').addEventListener('click', function () { showScreen('screen-home'); });
+    $all('[data-lb-level]').forEach(function (b) {
+      b.addEventListener('click', function () { lb.level = b.dataset.lbLevel; loadLeaderboard(); });
+    });
+    $all('[data-lb-period]').forEach(function (b) {
+      b.addEventListener('click', function () { lb.period = b.dataset.lbPeriod; loadLeaderboard(); });
+    });
 
     // mode select
     $all('[data-mode]').forEach(function (btn) {
@@ -896,6 +1062,12 @@
     $all('[data-pawns]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         settings.pawns = Number(btn.dataset.pawns);
+        saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-arena]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        settings.arena = b.dataset.arena;
         saveSettings(); syncModeUI();
       });
     });

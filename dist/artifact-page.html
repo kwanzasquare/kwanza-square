@@ -21,6 +21,7 @@
       <div class="menu">
         <button class="btn btn-primary" id="btn-play">Play</button>
         <button class="btn" id="btn-tutorial">How to play</button>
+        <button class="btn" id="btn-leaderboard">Leaderboard</button>
         <button class="btn" id="btn-tv">Play on TV</button>
         <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
       </div>
@@ -30,6 +31,28 @@
   <!-- ------------------------------------------------------- mode select -->
   <section class="screen" id="screen-mode">
     <div class="scroll-body">
+      <div class="panel">
+        <h2>Local or Global</h2>
+        <p class="hint">Local keeps everything on this phone. Global puts your finished matches on the public leaderboard.</p>
+        <div class="option-grid" role="radiogroup">
+          <div class="option" role="radio" tabindex="0" data-arena="local" aria-checked="true">
+            <span class="opt-icon">○</span>
+            <span>
+              <span class="opt-title">Local</span>
+              <span class="opt-desc">Nothing leaves this device. No name needed.</span>
+            </span>
+          </div>
+          <div class="option" role="radio" tabindex="0" data-arena="global" aria-checked="false">
+            <span class="opt-icon">◉</span>
+            <span>
+              <span class="opt-title">Global</span>
+              <span class="opt-desc">Ranked. Your result joins the world leaderboard.</span>
+            </span>
+          </div>
+        </div>
+        <p class="hint" id="arena-hint"></p>
+      </div>
+
       <div class="panel">
         <h2>Choose your opponent</h2>
         <p class="hint">Pass one device back and forth, or take on the Kwanza AI.</p>
@@ -196,6 +219,14 @@
       </div>
 
       <div class="panel" id="record-panel" hidden></div>
+
+      <div class="panel" id="submit-panel" hidden>
+        <h2>Put this on the leaderboard</h2>
+        <p class="hint" id="submit-hint"></p>
+        <div class="menu">
+          <button class="btn btn-gold" id="btn-submit">Submit result</button>
+        </div>
+      </div>
       <div class="menu">
         <button class="btn btn-gold" id="btn-rematch">Rematch</button>
         <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
@@ -214,6 +245,39 @@
     </div>
     <div class="tv-board"><svg id="tv-board"></svg></div>
     <div class="tv-prompt" id="tv-prompt">Waiting for the phone…</div>
+  </section>
+
+  <!-- ------------------------------------------------------- leaderboard -->
+  <section class="screen" id="screen-leaderboard">
+    <div class="scroll-body">
+      <div class="panel">
+        <div class="eyebrow">Kwanza Square</div>
+        <h2>Leaderboard</h2>
+        <p class="hint">Every match here was replayed and re-proved on the server. Nothing is taken on trust.</p>
+
+        <div class="seg" style="margin-bottom:8px">
+          <button class="btn btn-sm" data-lb-level="easy">Beginner</button>
+          <button class="btn btn-sm" data-lb-level="normal">Skilled</button>
+          <button class="btn btn-sm" data-lb-level="hard">Master</button>
+        </div>
+        <div class="seg">
+          <button class="btn btn-sm" data-lb-period="week">Week</button>
+          <button class="btn btn-sm" data-lb-period="month">Month</button>
+          <button class="btn btn-sm" data-lb-period="year">Year</button>
+          <button class="btn btn-sm" data-lb-period="all">All time</button>
+        </div>
+      </div>
+
+      <div class="panel" id="lb-panel">
+        <div class="lb-state" id="lb-state">Loading…</div>
+        <ol class="lb-rows" id="lb-rows"></ol>
+        <div class="lb-you" id="lb-you" hidden></div>
+      </div>
+
+      <div class="menu">
+        <button class="btn btn-ghost" id="btn-lb-back">Back</button>
+      </div>
+    </div>
   </section>
 
   <!-- ------------------------------------------------------------- modal -->
@@ -981,6 +1045,59 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   .camp.right .camp-cells { justify-content: flex-start; }
 }
 
+/* ------------------------------------------------------------- leaderboard */
+
+.lb-state { font-size: 13.5px; line-height: 1.6; color: rgba(247,243,233,.6); padding: 6px 2px; }
+
+.lb-rows { list-style: none; margin: 0; padding: 0; }
+.lb-row, .lb-you {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 4.2rem 2.6rem;
+  align-items: center; gap: 8px;
+  padding: 9px 4px;
+  border-bottom: 1px solid rgba(247,243,233,.07);
+  font-size: 14px;
+}
+.lb-row:last-child { border-bottom: none; }
+
+.lb-rank {
+  font-family: var(--ui-font); font-weight: 800; font-size: 13px;
+  color: rgba(247,243,233,.45);
+  font-variant-numeric: tabular-nums;
+}
+.lb-row:nth-child(1) .lb-rank { color: var(--gold-lift); }
+.lb-row:nth-child(2) .lb-rank,
+.lb-row:nth-child(3) .lb-rank { color: rgba(247,243,233,.8); }
+
+.lb-handle { font-family: var(--ui-font); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-rating { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; color: var(--gold-lift); }
+.lb-played { text-align: right; font-size: 12px; color: rgba(247,243,233,.45); font-variant-numeric: tabular-nums; }
+
+/* the player's own line, pinned wherever they rank */
+.lb-row.me, .lb-you {
+  background: rgba(212,160,23,.1);
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgba(212,160,23,.35);
+}
+.lb-you { margin-top: 12px; }
+
+.text-input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  min-height: var(--tap);
+  font-family: var(--ui-font); font-weight: 700; font-size: 15px;
+  color: var(--ivory);
+  background: rgba(247,243,233,.06);
+  border: 1px solid rgba(247,243,233,.2);
+  border-radius: var(--radius);
+}
+.text-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(212,160,23,.08);
+}
+
 </style>
 
 <script>
@@ -1144,13 +1261,18 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       roundHistory: [],
       matchOver: false,
       matchWinner: null,
-      startingPlayer: 'A'
+      startingPlayer: 'A',
+      // Every action of the whole match, in order, as compact keys. This is
+      // what a server replays to re-prove a submitted result: the client is
+      // never believed. 'R' marks the start of a new round.
+      actionLog: []
     };
     resetRound(state);
     return state;
   }
 
   function resetRound(state) {
+    if (!state.actionLog) state.actionLog = [];
     state.phase = 'placement';
     state.board = new Array(G.NODE_COUNT).fill(null);
     state.turn = state.startingPlayer;
@@ -1178,6 +1300,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       roundHistory: state.roundHistory.slice(),
       matchOver: state.matchOver, matchWinner: state.matchWinner,
       startingPlayer: state.startingPlayer,
+      actionLog: state.actionLog.slice(),
       phase: state.phase,
       board: state.board.slice(),
       turn: state.turn,
@@ -1334,6 +1457,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     if (action.type === 'place') {
       if (state.phase !== 'placement' || state.awaitingCapture) return events;
       if (state.board[action.node] !== null) return events;
+      state.actionLog.push('p' + action.node);
       state.board[action.node] = player;
       state.toPlace[player]--;
       state.onBoard[player]++;
@@ -1354,6 +1478,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       if (state.board[action.from] !== player) return events;
       if (legalMovesFrom(state, action.from).indexOf(action.to) === -1) return events;
 
+      state.actionLog.push('m' + action.from + '>' + action.to);
       state.board[action.from] = null;
       state.board[action.to] = player;
       state.lastMove[player] = { from: action.from, to: action.to };
@@ -1380,6 +1505,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       if (!state.awaitingCapture) return events;
       var taker = state.awaitingCapture;
       if (state.board[action.node] !== other(taker)) return events;
+      state.actionLog.push('x' + action.node);
       state.board[action.node] = null;
       state.onBoard[other(taker)]--;
       state.awaitingCapture = null;
@@ -1456,7 +1582,10 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     if (state.matchOver) return state;
     state.round++;
     state.startingPlayer = other(state.startingPlayer);
+    var log = state.actionLog;
     resetRound(state);
+    state.actionLog = log;
+    state.actionLog.push('R');
     return state;
   }
 
@@ -2270,7 +2399,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 (function (KZ) {
   'use strict';
 
-  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade;
+  var G = KZ.Geometry, E = KZ.Engine, AI = KZ.AI, R = KZ.Render, Gr = KZ.Grade, C = KZ.Cloud;
 
   var cards = null;        // grading cards, one per side, for the current match
 
@@ -2290,6 +2419,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     opponent: 'jade',    // colourway for the second side; gold is fixed
     pawns: 9,            // Martin's revised ruling
     roundsToWin: 2,      // 2 = best of three · 1 = single-round Quick Match
+    arena: 'local',      // 'local' keeps everything on the phone · 'global' is ranked
     v: 2                 // settings version, for one-time migrations
   };
 
@@ -2879,6 +3009,19 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     var rec = recordHtml();
     $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec : '';
     $('#record-panel').hidden = !rec;
+
+    // Only a ranked match against the AI can go on the board: two people on one
+    // phone have no single player to credit, and a local match never leaves it.
+    var rankable = settings.arena === 'global' && state.mode === 'ai' && state.matchOver;
+    var panel = $('#submit-panel');
+    panel.hidden = !rankable;
+    if (rankable) {
+      var btn = $('#btn-submit');
+      btn.textContent = 'Submit result';
+      btn.disabled = false;
+      btn.onclick = submitMatch;
+      $('#submit-hint').textContent = 'Your whole game is sent and replayed on the server, which works out the result for itself. Nothing is taken on trust.';
+    }
   }
 
   // ------------------------------------------------------------------ tutorial
@@ -3064,6 +3207,140 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]);
   }
 
+  // ------------------------------------------------------------- leaderboard
+
+  var lb = { level: 'normal', period: 'all' };
+
+  function syncLeaderboardTabs() {
+    $all('[data-lb-level]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lbLevel === lb.level));
+    });
+    $all('[data-lb-period]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lbPeriod === lb.period));
+    });
+  }
+
+  function levelName(level) {
+    return { easy: 'Beginner', normal: 'Skilled', hard: 'Master' }[level] || level;
+  }
+
+  function loadLeaderboard() {
+    syncLeaderboardTabs();
+    var rows = $('#lb-rows'), state = $('#lb-state'), you = $('#lb-you');
+    rows.innerHTML = '';
+    you.hidden = true;
+    state.hidden = false;
+    state.textContent = 'Loading…';
+
+    var mine = C.handle();
+    C.leaderboard(lb.level, lb.period, 100).then(function (list) {
+      if (!list || !list.length) {
+        state.textContent = 'No one has qualified for this board yet. Three matches puts you on it.';
+        return;
+      }
+      state.hidden = true;
+      rows.innerHTML = list.map(function (r) {
+        var isMe = mine && r.handle.toLowerCase() === mine.toLowerCase();
+        return '<li class="lb-row' + (isMe ? ' me' : '') + '">' +
+          '<span class="lb-rank">' + r.rank + '</span>' +
+          '<span class="lb-handle">' + escapeHtml(r.handle) + '</span>' +
+          '<span class="lb-rating">' + Number(r.rating).toFixed(2) + '</span>' +
+          '<span class="lb-played">' + r.matches + '</span>' +
+        '</li>';
+      }).join('');
+
+      // pin the player's own line, wherever they rank
+      if (mine && !list.some(function (r) { return r.handle.toLowerCase() === mine.toLowerCase(); })) {
+        return C.standing(mine, lb.level, lb.period).then(function (row) {
+          if (!row) return;
+          you.hidden = false;
+          you.innerHTML = '<span class="lb-rank">' + row.rank + '</span>' +
+            '<span class="lb-handle">' + escapeHtml(row.handle) + '</span>' +
+            '<span class="lb-rating">' + Number(row.rating).toFixed(2) + '</span>' +
+            '<span class="lb-played">' + row.matches + '</span>';
+        });
+      }
+    }).catch(function (err) {
+      // Never show a raw database error to a player — it is meaningless to them
+      // and it leaks how the back end is built. Keep the detail in the console.
+      console.warn('leaderboard request failed:', err);
+      state.hidden = false;
+      state.textContent = err.status === 404 || /schema cache|does not exist/i.test(err.message)
+        ? 'The leaderboard is not open yet. It arrives shortly.'
+        : 'Could not load the leaderboard just now. Please try again in a moment.';
+    });
+  }
+
+  function escapeHtml(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /** Ask for a name the first time someone submits. */
+  function askForHandle() {
+    return new Promise(function (resolve) {
+      openModal(
+        '<h2>Choose your name</h2><div class="modal-body">' +
+        '<p>This is the name that appears on the leaderboard. 3 to 16 letters, numbers or underscores.</p>' +
+        '<input id="handle-input" class="text-input" maxlength="16" autocomplete="off" ' +
+        'autocapitalize="off" spellcheck="false" placeholder="e.g. Abidjan_Ken">' +
+        '<p class="hint" id="handle-note">No email, no password — the name is all we keep.</p></div>',
+        [
+          { label: 'Cancel', onClick: function () { closeModal(); resolve(null); } },
+          { label: 'Claim it', cls: 'btn-gold', onClick: function () {
+            var input = $('#handle-input');
+            var note = $('#handle-note');
+            var name = (input.value || '').trim();
+            if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) {
+              note.textContent = '3 to 16 letters, numbers or underscores.';
+              return;
+            }
+            note.textContent = 'Checking…';
+            C.isHandleFree(name).then(function (free) {
+              if (!free) { note.textContent = 'That name is taken. Try another.'; return; }
+              C.setHandle(name);
+              closeModal();
+              resolve(name);
+            }).catch(function (e) { note.textContent = e.message; });
+          } }
+        ]
+      );
+      setTimeout(function () { var i = $('#handle-input'); if (i) i.focus(); }, 60);
+    });
+  }
+
+  function submitMatch() {
+    var btn = $('#btn-submit');
+    var hint = $('#submit-hint');
+    var me = state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : 'A';
+
+    Promise.resolve(C.handle() || askForHandle()).then(function (name) {
+      if (!name) return;
+      btn.disabled = true;
+      hint.textContent = 'Sending the whole game for checking…';
+      return C.submit(state, me, name).then(function (res) {
+        if (res.duplicate) {
+          hint.textContent = 'This match was already on the leaderboard.';
+        } else {
+          hint.textContent = 'Verified and recorded — ' + res.result + ', ' +
+            res.accuracy + '% accuracy, ' + res.points + ' points.' +
+            (res.standing ? ' You are ranked ' + res.standing.rank + '.' : '');
+        }
+        btn.textContent = 'View leaderboard';
+        btn.disabled = false;
+        btn.onclick = function () { showScreen('screen-leaderboard'); loadLeaderboard(); };
+      });
+    }).catch(function (err) {
+      console.warn('submit failed:', err);
+      // 4xx messages are written for players; anything else is ours to hide.
+      hint.textContent = (err.status >= 400 && err.status < 500 && err.message)
+        ? err.message
+        : 'Could not reach the leaderboard just now. Your game is safe — try again shortly.';
+      btn.disabled = false;
+    });
+  }
+
   // ---------------------------------------------------------------- match setup
 
   function startMatch() {
@@ -3123,6 +3400,14 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     });
     $('#pawns-hint').textContent = PAWNS_HINT[settings.pawns] || '';
 
+    $all('[data-arena]').forEach(function (b) {
+      b.setAttribute('aria-checked', String(b.dataset.arena === settings.arena));
+    });
+    $('#arena-hint').textContent = settings.arena === 'global'
+      ? (C.handle() ? 'Playing as ' + C.handle() + '. Finished matches against the AI can be submitted.'
+                    : 'You will pick a name when you submit your first result.')
+      : 'Nothing is sent anywhere. You can switch to Global at any time.';
+
     $all('[data-rounds]').forEach(function (btn) {
       btn.setAttribute('aria-pressed', String(Number(btn.dataset.rounds) === settings.roundsToWin));
     });
@@ -3149,6 +3434,16 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     });
     $('#btn-rules-home').addEventListener('click', showRules);
     $('#btn-tv').addEventListener('click', connectTv);
+    $('#btn-leaderboard').addEventListener('click', function () {
+      showScreen('screen-leaderboard'); loadLeaderboard();
+    });
+    $('#btn-lb-back').addEventListener('click', function () { showScreen('screen-home'); });
+    $all('[data-lb-level]').forEach(function (b) {
+      b.addEventListener('click', function () { lb.level = b.dataset.lbLevel; loadLeaderboard(); });
+    });
+    $all('[data-lb-period]').forEach(function (b) {
+      b.addEventListener('click', function () { lb.period = b.dataset.lbPeriod; loadLeaderboard(); });
+    });
 
     // mode select
     $all('[data-mode]').forEach(function (btn) {
@@ -3164,6 +3459,12 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     $all('[data-pawns]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         settings.pawns = Number(btn.dataset.pawns);
+        saveSettings(); syncModeUI();
+      });
+    });
+    $all('[data-arena]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        settings.arena = b.dataset.arena;
         saveSettings(); syncModeUI();
       });
     });

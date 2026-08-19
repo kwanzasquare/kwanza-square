@@ -27,6 +27,7 @@
       <div class="menu">
         <button class="btn btn-primary" id="btn-play">Play</button>
         <button class="btn" id="btn-tutorial">How to play</button>
+        <button class="btn" id="btn-leaderboard">Leaderboard</button>
         <button class="btn" id="btn-tv">Play on TV</button>
         <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
       </div>
@@ -36,6 +37,28 @@
   <!-- ------------------------------------------------------- mode select -->
   <section class="screen" id="screen-mode">
     <div class="scroll-body">
+      <div class="panel">
+        <h2>Local or Global</h2>
+        <p class="hint">Local keeps everything on this phone. Global puts your finished matches on the public leaderboard.</p>
+        <div class="option-grid" role="radiogroup">
+          <div class="option" role="radio" tabindex="0" data-arena="local" aria-checked="true">
+            <span class="opt-icon">○</span>
+            <span>
+              <span class="opt-title">Local</span>
+              <span class="opt-desc">Nothing leaves this device. No name needed.</span>
+            </span>
+          </div>
+          <div class="option" role="radio" tabindex="0" data-arena="global" aria-checked="false">
+            <span class="opt-icon">◉</span>
+            <span>
+              <span class="opt-title">Global</span>
+              <span class="opt-desc">Ranked. Your result joins the world leaderboard.</span>
+            </span>
+          </div>
+        </div>
+        <p class="hint" id="arena-hint"></p>
+      </div>
+
       <div class="panel">
         <h2>Choose your opponent</h2>
         <p class="hint">Pass one device back and forth, or take on the Kwanza AI.</p>
@@ -202,6 +225,14 @@
       </div>
 
       <div class="panel" id="record-panel" hidden></div>
+
+      <div class="panel" id="submit-panel" hidden>
+        <h2>Put this on the leaderboard</h2>
+        <p class="hint" id="submit-hint"></p>
+        <div class="menu">
+          <button class="btn btn-gold" id="btn-submit">Submit result</button>
+        </div>
+      </div>
       <div class="menu">
         <button class="btn btn-gold" id="btn-rematch">Rematch</button>
         <button class="btn btn-ghost" id="btn-scoreboard-home">Main menu</button>
@@ -222,6 +253,39 @@
     <div class="tv-prompt" id="tv-prompt">Waiting for the phone…</div>
   </section>
 
+  <!-- ------------------------------------------------------- leaderboard -->
+  <section class="screen" id="screen-leaderboard">
+    <div class="scroll-body">
+      <div class="panel">
+        <div class="eyebrow">Kwanza Square</div>
+        <h2>Leaderboard</h2>
+        <p class="hint">Every match here was replayed and re-proved on the server. Nothing is taken on trust.</p>
+
+        <div class="seg" style="margin-bottom:8px">
+          <button class="btn btn-sm" data-lb-level="easy">Beginner</button>
+          <button class="btn btn-sm" data-lb-level="normal">Skilled</button>
+          <button class="btn btn-sm" data-lb-level="hard">Master</button>
+        </div>
+        <div class="seg">
+          <button class="btn btn-sm" data-lb-period="week">Week</button>
+          <button class="btn btn-sm" data-lb-period="month">Month</button>
+          <button class="btn btn-sm" data-lb-period="year">Year</button>
+          <button class="btn btn-sm" data-lb-period="all">All time</button>
+        </div>
+      </div>
+
+      <div class="panel" id="lb-panel">
+        <div class="lb-state" id="lb-state">Loading…</div>
+        <ol class="lb-rows" id="lb-rows"></ol>
+        <div class="lb-you" id="lb-you" hidden></div>
+      </div>
+
+      <div class="menu">
+        <button class="btn btn-ghost" id="btn-lb-back">Back</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ------------------------------------------------------------- modal -->
   <div class="modal-backdrop" id="modal-backdrop">
     <div class="modal" role="dialog" aria-modal="true">
@@ -236,6 +300,7 @@
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/grade.js"></script>
+<script src="js/cloud.js"></script>
 <script src="js/celebrate.js"></script>
 <script src="js/render.js"></script>
 <script src="js/app.js"></script>
