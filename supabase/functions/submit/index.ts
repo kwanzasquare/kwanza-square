@@ -42,8 +42,35 @@ async function sha256(text: string) {
     .map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * The server-side key.
+ *
+ * This project uses the newer Supabase API keys (sb_publishable_… / sb_secret_…),
+ * where the key reaches functions as SUPABASE_SECRET_KEY. Projects still on the
+ * legacy JWT keys get SUPABASE_SERVICE_ROLE_KEY instead. Accept either, so the
+ * function keeps working whichever scheme the project is on.
+ */
+function serverKey(): string | null {
+  return Deno.env.get("SUPABASE_SECRET_KEY") ??
+         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+         null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // A boolean-only health check: which key names exist, never their values.
+  // Without this, a misconfigured key is invisible from outside.
+  if (req.method === "GET") {
+    return json({
+      ok: true,
+      hasSecretKey: !!Deno.env.get("SUPABASE_SECRET_KEY"),
+      hasServiceRoleKey: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+      hasUrl: !!Deno.env.get("SUPABASE_URL"),
+      engine: typeof KZ?.Verify?.replay === "function" ? "loaded" : "missing",
+    });
+  }
+
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   let body: any;
@@ -81,9 +108,14 @@ Deno.serve(async (req) => {
     return json({ error: "That game could not be verified.", reason: verdict.reason }, 422);
   }
 
+  const key = serverKey();
+  if (!key) {
+    console.error("no server key in the environment");
+    return json({ error: "The leaderboard is not configured yet.", stage: "config" }, 503);
+  }
   const db = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    key,
     { auth: { persistSession: false } },
   );
 
@@ -94,7 +126,7 @@ Deno.serve(async (req) => {
 
   if (lookupErr) {
     console.error("player lookup failed", lookupErr);
-    return json({ error: "Could not reach the leaderboard. Try again shortly." }, 503);
+    return json({ error: "Could not reach the leaderboard. Try again shortly.", stage: "player-lookup", detail: lookupErr.message }, 503);
   }
 
   let playerId: string;
@@ -113,7 +145,7 @@ Deno.serve(async (req) => {
         return json({ error: "That name was just taken. Please choose another." }, 409);
       }
       console.error("player insert failed", insertErr);
-      return json({ error: "Could not reach the leaderboard. Try again shortly." }, 503);
+      return json({ error: "Could not reach the leaderboard. Try again shortly.", stage: "player-insert", detail: insertErr.message }, 503);
     }
     playerId = created.id;
   }
@@ -147,7 +179,7 @@ Deno.serve(async (req) => {
 
   if (matchErr && matchErr.code !== "23505") {
     console.error("match insert failed", matchErr);
-    return json({ error: "Could not save that game. Try again shortly." }, 503);
+    return json({ error: "Could not save that game. Try again shortly.", stage: "match-insert", detail: matchErr.message }, 503);
   }
   const duplicate = matchErr?.code === "23505";
 
