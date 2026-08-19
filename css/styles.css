@@ -804,3 +804,80 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   border-color: var(--gold);
   background: rgba(212,160,23,.08);
 }
+
+/* ------------------------------------------------- leaderboard on the home */
+
+.home-board {
+  width: min(100%, 340px);
+  text-align: left;
+  padding: 13px 15px 11px;
+  border-radius: 16px;
+  border: 1px solid rgba(212,160,23,.28);
+  background: linear-gradient(180deg, rgba(212,160,23,.09), rgba(10,10,10,.5));
+  cursor: pointer;
+  transition: transform .14s ease, border-color .2s ease, background .2s ease;
+  animation: board-in .45s ease both;
+}
+.home-board:hover { border-color: rgba(212,160,23,.5); }
+.home-board:active { transform: scale(.985); }
+.home-board:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@keyframes board-in { from { opacity: 0; transform: translateY(8px); } }
+
+.home-board-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 9px;
+}
+.home-board-title {
+  font-family: var(--accent-font);
+  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold);
+}
+.home-board-more {
+  font-family: var(--ui-font); font-weight: 700;
+  font-size: 11px; color: rgba(247,243,233,.5);
+}
+.home-board:hover .home-board-more { color: var(--gold-lift); }
+
+.home-board-rows { list-style: none; margin: 0; padding: 0; }
+.home-board-rows li, .home-board-you {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  align-items: center; gap: 9px;
+  padding: 5px 0;
+  font-size: 13.5px;
+}
+.home-board-rows li + li { border-top: 1px solid rgba(247,243,233,.06); }
+
+.home-board .rk {
+  font-family: var(--ui-font); font-weight: 800; font-size: 12px;
+  color: rgba(247,243,233,.4); font-variant-numeric: tabular-nums;
+}
+.home-board-rows li:first-child .rk { color: var(--gold-lift); }
+.home-board .hn {
+  font-family: var(--ui-font); font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.home-board .rt {
+  font-weight: 700; color: var(--gold-lift);
+  font-variant-numeric: tabular-nums; font-size: 13px;
+}
+
+.home-board-you {
+  margin-top: 7px; padding-top: 8px;
+  border-top: 1px dashed rgba(212,160,23,.35);
+}
+.home-board-you .hn { color: var(--gold-lift); }
+
+.home-board-empty {
+  font-size: 13px; line-height: 1.5;
+  color: rgba(247,243,233,.62);
+  padding: 2px 0 3px;
+}
+
+/* the home column gets tall with the board on it — let it breathe and scroll */
+.home-wrap { justify-content: center; }
+@media (max-height: 780px) {
+  .home-wrap { gap: 16px; padding-top: 20px; }
+  .brand-mark { width: min(44vw, 150px); }
+  .brand-note { display: none; }
+}

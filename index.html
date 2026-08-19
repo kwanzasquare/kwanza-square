@@ -27,9 +27,19 @@
       <div class="menu">
         <button class="btn btn-primary" id="btn-play">Play</button>
         <button class="btn" id="btn-tutorial">How to play</button>
-        <button class="btn" id="btn-leaderboard">Leaderboard</button>
         <button class="btn" id="btn-tv">Play on TV</button>
         <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
+      </div>
+
+      <!-- A glimpse of the standings. Seeing the names is a better invitation
+           than a button that merely says "Leaderboard". -->
+      <div class="home-board" id="home-board" role="button" tabindex="0" hidden>
+        <div class="home-board-head">
+          <span class="home-board-title" id="home-board-title">Leaderboard</span>
+          <span class="home-board-more">View all</span>
+        </div>
+        <ol class="home-board-rows" id="home-board-rows"></ol>
+        <div class="home-board-you" id="home-board-you" hidden></div>
       </div>
     </div>
   </section>
