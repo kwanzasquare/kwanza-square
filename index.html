@@ -26,20 +26,31 @@
       </p>
       <div class="menu">
         <button class="btn btn-primary" id="btn-play">Play</button>
-        <button class="btn" id="btn-tutorial">How to play</button>
-        <button class="btn" id="btn-tv">Play on TV</button>
-        <button class="btn btn-ghost" id="btn-rules-home">Rules</button>
+        <!-- The three secondary doors sit on one line so the standings clear
+             the fold on a phone. Play keeps the full width; nothing else needs it. -->
+        <div class="menu-row">
+          <button class="btn btn-sm" id="btn-tutorial">How to play</button>
+          <button class="btn btn-sm" id="btn-tv">Play on TV</button>
+          <button class="btn btn-sm" id="btn-rules-home">Rules</button>
+        </div>
       </div>
 
       <!-- A glimpse of the standings. Seeing the names is a better invitation
            than a button that merely says "Leaderboard". -->
-      <div class="home-board" id="home-board" role="button" tabindex="0" hidden>
+      <div class="home-board" id="home-board" hidden>
         <div class="home-board-head">
           <span class="home-board-title" id="home-board-title">Leaderboard</span>
-          <span class="home-board-more">View all</span>
+          <button class="home-board-more" id="btn-home-board-more">View all</button>
+        </div>
+        <div class="home-board-tabs" id="home-board-tabs" role="tablist" aria-label="Leaderboard period">
+          <button class="home-tab" data-home-period="day" hidden>Today</button>
+          <button class="home-tab" data-home-period="week">Week</button>
+          <button class="home-tab" data-home-period="month">Month</button>
+          <button class="home-tab" data-home-period="all">All time</button>
         </div>
         <ol class="home-board-rows" id="home-board-rows"></ol>
         <div class="home-board-you" id="home-board-you" hidden></div>
+        <div class="home-board-note" id="home-board-note" hidden></div>
       </div>
     </div>
   </section>
@@ -277,6 +288,7 @@
           <button class="btn btn-sm" data-lb-level="hard">Master</button>
         </div>
         <div class="seg">
+          <button class="btn btn-sm" data-lb-period="day" hidden>Today</button>
           <button class="btn btn-sm" data-lb-period="week">Week</button>
           <button class="btn btn-sm" data-lb-period="month">Month</button>
           <button class="btn btn-sm" data-lb-period="year">Year</button>

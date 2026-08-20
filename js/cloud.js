@@ -92,6 +92,31 @@
     return rpc('leaderboard', { p_level: level, p_period: period || 'all', p_limit: limit || 100 });
   }
 
+  /**
+   * Which periods the database actually understands.
+   *
+   * This matters more than it looks. period_start() falls back to all-time for
+   * any period it does not recognise, so offering a tab the server has never
+   * heard of would show all-time results under the wrong heading — wrong, and
+   * wrong in a way nobody would notice. So the app asks first, and simply omits
+   * any tab the server cannot honour. Older deployments lose a tab; none of
+   * them lie. Asked once per session and cached.
+   */
+  var periodsPromise = null;
+  function periods() {
+    if (!periodsPromise) {
+      periodsPromise = rpc('supported_periods').then(function (list) {
+        return (list && list.length) ? list : FALLBACK_PERIODS;
+      }, function () {
+        // An old database has no such function. Fall back to what it has always
+        // known, rather than to nothing.
+        return FALLBACK_PERIODS;
+      });
+    }
+    return periodsPromise;
+  }
+  var FALLBACK_PERIODS = ['week', 'month', 'year', 'all'];
+
   function standing(name, level, period) {
     return rpc('my_standing', { p_handle: name, p_level: level, p_period: period || 'all' })
       .then(function (rows) { return (rows && rows[0]) || null; });
@@ -124,6 +149,7 @@
     forget: forget,
     isHandleFree: isHandleFree,
     leaderboard: leaderboard,
+    periods: periods,
     standing: standing,
     submit: submit
   };

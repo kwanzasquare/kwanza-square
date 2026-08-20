@@ -88,6 +88,9 @@
 
   function showScreen(id) {
     $all('.screen').forEach(function (s) { s.classList.toggle('active', s.id === id); });
+    // Coming home after a match is exactly when the standings may have moved,
+    // and exactly when the player cares.
+    if (id === 'screen-home') loadHomeBoard();
   }
 
   function humanSide() { return state.mode === 'ai' ? (state.aiSide === 'A' ? 'B' : 'A') : state.turn; }
@@ -874,6 +877,126 @@
     });
   }
 
+  // ------------------------------------------------------ the board at home
+  //
+  // Stephan's idea, and the right one: seeing five real names is a far better
+  // invitation than a button that merely says "Leaderboard". Five rows and four
+  // periods is the most that stays calm above the fold on a phone; the full
+  // board is one tap away for anyone who wants depth.
+
+  var HOME_ROWS = 5;
+  var homePeriod = 'all';
+  var homeRequest = 0;
+
+  // What the board looks like before anyone has earned a place on it.
+  //
+  // An empty leaderboard is a dead card, and hiding it entirely — which is what
+  // it used to do — means the one screen meant to make people want a place on
+  // it shows nothing at all. So it shows the shape of the thing instead.
+  //
+  // These names are dimmed and captioned as an example on every path that can
+  // reach them. That is not decoration: a placeholder that could be mistaken
+  // for a real standing would be a lie told to every new player, and it would
+  // devalue the real names the moment they arrive.
+  var EXAMPLE_ROWS = [
+    { rank: 1, handle: 'Kwaku',  rating: 96.4 },
+    { rank: 2, handle: 'Amina',  rating: 94.1 },
+    { rank: 3, handle: 'Kofi',   rating: 91.7 },
+    { rank: 4, handle: 'Nia',    rating: 88.3 },
+    { rank: 5, handle: 'Zola',   rating: 86.9 }
+  ];
+
+  function showExample(note) {
+    var card = $('#home-board');
+    card.hidden = false;
+    $('#home-board-you').hidden = true;
+    $('#home-board-rows').innerHTML = EXAMPLE_ROWS.map(function (r) {
+      return '<li class="hb-row ghost">' +
+        '<span class="rk">' + r.rank + '</span>' +
+        '<span class="hn">' + r.handle + '</span>' +
+        '<span class="rt">' + r.rating.toFixed(2) + '</span>' +
+      '</li>';
+    }).join('');
+    var el = $('#home-board-note');
+    el.hidden = false;
+    el.textContent = note;
+  }
+
+  function homeLevel() {
+    return settings.difficulty || 'normal';
+  }
+
+  function syncHomeTabs() {
+    $all('[data-home-period]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.homePeriod === homePeriod));
+    });
+  }
+
+  function homeRow(r, mine) {
+    var isMe = mine && r.handle.toLowerCase() === mine.toLowerCase();
+    return '<li class="hb-row' + (isMe ? ' me' : '') + '">' +
+      '<span class="rk">' + r.rank + '</span>' +
+      '<span class="hn">' + escapeHtml(r.handle) + '</span>' +
+      '<span class="rt">' + Number(r.rating).toFixed(2) + '</span>' +
+    '</li>';
+  }
+
+  function loadHomeBoard() {
+    var card = $('#home-board');
+    if (!card) return;
+    var rows = $('#home-board-rows'), you = $('#home-board-you');
+    var seq = ++homeRequest;   // a slow tab must never overwrite a newer one
+
+    syncHomeTabs();
+    $('#home-board-title').textContent = 'Top players — ' + levelName(homeLevel());
+
+    var mine = C.handle();
+    C.leaderboard(homeLevel(), homePeriod, HOME_ROWS).then(function (list) {
+      if (seq !== homeRequest) return;
+      card.hidden = false;
+      you.hidden = true;
+
+      if (!list || !list.length) {
+        showExample('Example — nobody has qualified' +
+          (homePeriod === 'all' ? '' : ' in this stretch') +
+          ' yet. Three matches puts your name here for real.');
+        return;
+      }
+      $('#home-board-note').hidden = true;
+      rows.innerHTML = list.map(function (r) { return homeRow(r, mine); }).join('');
+
+      // If the player is playing but is not in the five, show them where they
+      // stand anyway. A leaderboard you cannot find yourself on is discouraging.
+      if (mine && !list.some(function (r) { return r.handle.toLowerCase() === mine.toLowerCase(); })) {
+        C.standing(mine, homeLevel(), homePeriod).then(function (row) {
+          if (seq !== homeRequest || !row) return;
+          you.hidden = false;
+          you.innerHTML = '<span class="rk">' + row.rank + '</span>' +
+            '<span class="hn">' + escapeHtml(row.handle) + '</span>' +
+            '<span class="rt">' + Number(row.rating).toFixed(2) + '</span>';
+        }, function () {});
+      }
+    }, function (err) {
+      // A raw error on the home screen reads as a broken game, and hiding the
+      // card reads as a game with no leaderboard. Show the shape of it, and say
+      // plainly that these are not real standings.
+      if (seq !== homeRequest) return;
+      console.warn('home leaderboard unavailable:', err);
+      showExample('Example — the live standings could not be reached just now.');
+    });
+  }
+
+  /** Reveal any period tab the database actually supports. */
+  function revealSupportedPeriods() {
+    C.periods().then(function (list) {
+      list.forEach(function (p) {
+        $all('[data-home-period="' + p + '"], [data-lb-period="' + p + '"]').forEach(function (b) {
+          b.hidden = false;
+        });
+      });
+    }, function () {});
+  }
+
   function escapeHtml(t) {
     return String(t).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -1037,9 +1160,22 @@
     });
     $('#btn-rules-home').addEventListener('click', showRules);
     $('#btn-tv').addEventListener('click', connectTv);
-    $('#btn-leaderboard').addEventListener('click', function () {
-      showScreen('screen-leaderboard'); loadLeaderboard();
+    function openLeaderboard() {
+      lb.level = homeLevel();
+      lb.period = homePeriod;
+      showScreen('screen-leaderboard');
+      loadLeaderboard();
+    }
+    $('#btn-home-board-more').addEventListener('click', openLeaderboard);
+    $('#home-board-rows').addEventListener('click', openLeaderboard);
+    $all('[data-home-period]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        homePeriod = b.dataset.homePeriod;
+        loadHomeBoard();
+      });
     });
+    revealSupportedPeriods();
+    loadHomeBoard();
     $('#btn-lb-back').addEventListener('click', function () { showScreen('screen-home'); });
     $all('[data-lb-level]').forEach(function (b) {
       b.addEventListener('click', function () { lb.level = b.dataset.lbLevel; loadLeaderboard(); });
