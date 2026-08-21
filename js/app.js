@@ -906,6 +906,49 @@
     { rank: 5, handle: 'Zola',   rating: 86.9 }
   ];
 
+  /**
+   * The way onto the board.
+   *
+   * This was missing entirely, and the omission was invisible from the inside:
+   * the machinery all worked, but the ONLY route to it was to notice the
+   * Local/Global panel on the Play screen, switch it, finish a match, and then
+   * be asked for a name at the very end. Local is the default, so a player who
+   * simply pressed Play could never appear on the board and was never told why.
+   *
+   * So the card now says where the player stands and offers the name directly.
+   * Claiming one also turns ranked play on — asking someone to pick a
+   * leaderboard name and then quietly not ranking them would be absurd — and
+   * the button says so before they tap it.
+   */
+  function renderHomeCta() {
+    var el = $('#home-board-cta');
+    if (!el) return;
+    var mine = C.handle();
+
+    if (!mine) {
+      el.innerHTML = '<button class="btn btn-sm btn-gold" id="btn-claim-name">Choose your name</button>' +
+        '<span class="cta-note">and play ranked</span>';
+      return;
+    }
+    el.innerHTML = '<span class="cta-note">Playing as <b>' + escapeHtml(mine) + '</b>. ' +
+      (settings.arena === 'global'
+        ? 'Beat the Kwanza AI and submit the match.'
+        : 'Ranked play is off — switch to Global when you press Play.') +
+      '</span>';
+  }
+
+  function claimName() {
+    askForHandle().then(function (name) {
+      if (!name) return;
+      // Claiming a leaderboard name IS the decision to be ranked.
+      settings.arena = 'global';
+      saveSettings();
+      syncModeUI();
+      renderHomeCta();
+      loadHomeBoard();
+    });
+  }
+
   function showExample(note) {
     var card = $('#home-board');
     card.hidden = false;
@@ -948,6 +991,7 @@
     var seq = ++homeRequest;   // a slow tab must never overwrite a newer one
 
     syncHomeTabs();
+    renderHomeCta();
     $('#home-board-title').textContent = 'Top players — ' + levelName(homeLevel());
 
     var mine = C.handle();
@@ -959,7 +1003,7 @@
       if (!list || !list.length) {
         showExample('Example — nobody has qualified' +
           (homePeriod === 'all' ? '' : ' in this stretch') +
-          ' yet. Three matches puts your name here for real.');
+          ' yet. Three ranked matches puts a real name here.');
         return;
       }
       $('#home-board-note').hidden = true;
@@ -1131,7 +1175,7 @@
     });
     $('#arena-hint').textContent = settings.arena === 'global'
       ? (C.handle() ? 'Playing as ' + C.handle() + '. Finished matches against the AI can be submitted.'
-                    : 'You will pick a name when you submit your first result.')
+                    : 'Pick your name on the home screen, or when you submit your first result.')
       : 'Nothing is sent anywhere. You can switch to Global at any time.';
 
     $all('[data-rounds]').forEach(function (btn) {
@@ -1167,6 +1211,9 @@
       loadLeaderboard();
     }
     $('#btn-home-board-more').addEventListener('click', openLeaderboard);
+    $('#home-board-cta').addEventListener('click', function (ev) {
+      if (ev.target.closest('#btn-claim-name')) claimName();
+    });
     $('#home-board-rows').addEventListener('click', openLeaderboard);
     $all('[data-home-period]').forEach(function (b) {
       b.addEventListener('click', function () {

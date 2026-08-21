@@ -897,6 +897,18 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
    for somebody's real standing, or the real names mean nothing when they land. */
 .home-board-rows .ghost { opacity: .38; }
 .home-board-rows .ghost .rt { color: rgba(247,243,233,.55); }
+.home-board-cta {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  margin-top: 9px; padding-top: 9px;
+  border-top: 1px solid rgba(247,243,233,.08);
+}
+.home-board-cta .cta-note {
+  font-size: 11.5px; line-height: 1.45;
+  color: rgba(247,243,233,.55);
+}
+.home-board-cta .cta-note b { color: var(--gold-lift); font-weight: 800; }
+.home-board-cta .btn { flex: 0 0 auto; }
+
 .home-board-note {
   margin-top: 9px; padding-top: 8px;
   border-top: 1px dashed rgba(247,243,233,.14);
