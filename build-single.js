@@ -18,13 +18,27 @@ const root = __dirname;
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 
 const css = read('css/styles.css');
-const scripts = ['js/geometry.js', 'js/engine.js', 'js/ai.js', 'js/render.js', 'js/app.js']
+const index = read('index.html');
+
+// The script list is READ FROM index.html, never written down here.
+//
+// It used to be a hand-written array, and it silently fell three files behind:
+// grade.js, cloud.js and celebrate.js were added to the page and never added
+// here. The bundle still built, still passed every test, and still looked
+// right — but KZ.Cloud was undefined inside it, so the very first click threw
+// and the standalone file did nothing at all. A copy of a list is a copy that
+// drifts; the page is the only honest source of what the app needs.
+const sources = [...index.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+if (!sources.length) {
+  console.error('No <script src> tags found in index.html — refusing to build a bundle with no code.');
+  process.exit(1);
+}
+const scripts = sources
   .map(f => '/* ===== ' + f + ' ===== */\n' + read(f))
   .join('\n\n');
 
 // Take the markup from index.html: everything between <div id="app"> and its
 // closing tag, inclusive. Keeps one source of truth for the DOM.
-const index = read('index.html');
 const start = index.indexOf('<div id="app">');
 const end = index.lastIndexOf('</div>');
 if (start === -1 || end === -1) {

@@ -1949,6 +1949,560 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 })(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
 
 
+/* ===== js/grade.js ===== */
+/* Kwanza Square — grading a player's thinking.
+ *
+ * The point, in Martin's words: most people will lose to the AI, so losing
+ * badly and losing well must not look the same. This measures whether the moves
+ * showed strategy or were close to random, and it works just as well in a
+ * defeat as in a win.
+ *
+ * Method, per decision:
+ *   1. Score every move the player COULD have made (deterministically).
+ *   2. See where the move they actually chose ranked between the best and the
+ *      worst available.
+ *   3. quality = (played - worst) / (best - worst)  ->  0 for the worst move
+ *      available, 1 for the best.
+ *
+ * Decisions where every option is equal, or where only one move is legal, carry
+ * no information about skill and are excluded rather than counted as perfect.
+ *
+ * Accuracy is the mean quality across graded decisions. It is a judgement
+ * against this engine's opinion, not against absolute truth — a strong human
+ * may play a good move the engine dislikes.
+ *
+ * Every decision is also recorded as a move list, so a future server could
+ * replay a game and confirm both the result and the grade independently.
+ */
+(function (KZ) {
+  'use strict';
+
+  var AI = KZ.AI;
+
+  var GRADE_DEPTH = 2;      // deep enough to be meaningful, fast enough on a phone
+  var FLAT_SPREAD = 10;     // below this, the options are effectively equivalent
+  var BLUNDER_SPREAD = 60;  // a decision that genuinely mattered
+  var BLUNDER_QUALITY = 0.25;
+
+  var BANDS = [
+    { min: 92, grade: 'A+', note: 'Masterful. Nearly every move was the strongest available.' },
+    { min: 85, grade: 'A',  note: 'Excellent judgement. You saw the board clearly.' },
+    { min: 76, grade: 'B',  note: 'Strong play with a few missed chances.' },
+    { min: 66, grade: 'C',  note: 'Sound instincts, but several moves gave ground away.' },
+    { min: 55, grade: 'D',  note: 'The shape of a plan is there. Watch your opponent\'s trios.' },
+    { min: 0,  grade: 'E',  note: 'Mostly reacting rather than planning. Try the tutorial.' }
+  ];
+
+  function newCard() {
+    return {
+      decisions: 0,      // graded decisions
+      skipped: 0,        // forced or equivalent-option decisions
+      sum: 0,            // summed quality
+      best: 0,           // times the strongest move was chosen
+      blunders: 0,
+      trios: 0,
+      captures: 0,
+      lost: 0,           // own soldiers taken
+      moves: []          // the move list, for later verification
+    };
+  }
+
+  /**
+   * Judge one decision before it is played.
+   * `state` must be the position BEFORE the action.
+   */
+  function assess(state, action) {
+    var scored = AI.scoreActions(state, GRADE_DEPTH);
+    if (scored.length < 2) return { forced: true };
+
+    var best = scored[0].value;
+    var worst = scored[scored.length - 1].value;
+    var spread = best - worst;
+    if (spread < FLAT_SPREAD) return { forced: true };
+
+    var key = actionKey(action);
+    var played = null;
+    for (var i = 0; i < scored.length; i++) {
+      if (actionKey(scored[i].action) === key) { played = scored[i].value; break; }
+    }
+    if (played === null) return { forced: true }; // not a legal action; nothing to judge
+
+    var quality = (played - worst) / spread;
+    return {
+      forced: false,
+      quality: quality,
+      wasBest: played >= best - 1e-9,
+      blunder: quality < BLUNDER_QUALITY && spread >= BLUNDER_SPREAD,
+      spread: spread
+    };
+  }
+
+  function actionKey(a) {
+    return a.type === 'move' ? 'm' + a.from + '>' + a.to
+      : a.type === 'place' ? 'p' + a.node
+      : 'x' + a.node;
+  }
+
+  /** Fold one judged decision into a card. */
+  function record(card, action, verdict) {
+    card.moves.push(actionKey(action));
+    if (!verdict || verdict.forced) { card.skipped++; return; }
+    card.decisions++;
+    card.sum += verdict.quality;
+    if (verdict.wasBest) card.best++;
+    if (verdict.blunder) card.blunders++;
+  }
+
+  /** Final numbers for a card. */
+  function summarise(card) {
+    var accuracy = card.decisions ? (card.sum / card.decisions) * 100 : null;
+    var band = null;
+    if (accuracy !== null) {
+      for (var i = 0; i < BANDS.length; i++) {
+        if (accuracy >= BANDS[i].min) { band = BANDS[i]; break; }
+      }
+    }
+    return {
+      accuracy: accuracy,
+      accuracyText: accuracy === null ? '—' : Math.round(accuracy) + '%',
+      grade: band ? band.grade : '—',
+      note: band ? band.note : 'Not enough real decisions to grade this round.',
+      bestRate: card.decisions ? Math.round((card.best / card.decisions) * 100) : 0,
+      decisions: card.decisions,
+      blunders: card.blunders,
+      trios: card.trios,
+      captures: card.captures,
+      lost: card.lost,
+      moves: card.moves
+    };
+  }
+
+  // --------------------------------------------------------------- persistence
+
+  var STORE = 'kwanza-record';
+
+  function loadRecord() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { played: 0, won: 0, lost: 0, drawn: 0, bestAccuracy: null, sumAccuracy: 0, graded: 0, streak: 0, bestStreak: 0 };
+  }
+
+  function saveRecord(rec) {
+    try { localStorage.setItem(STORE, JSON.stringify(rec)); } catch (e) {}
+  }
+
+  /** Fold a finished match into the player's lifetime record. */
+  function commitMatch(result) {
+    var rec = loadRecord();
+    rec.played++;
+    if (result.won) { rec.won++; rec.streak++; if (rec.streak > rec.bestStreak) rec.bestStreak = rec.streak; }
+    else if (result.drawn) { rec.drawn++; }
+    else { rec.lost++; rec.streak = 0; }
+
+    if (typeof result.accuracy === 'number') {
+      rec.sumAccuracy += result.accuracy;
+      rec.graded++;
+      if (rec.bestAccuracy === null || result.accuracy > rec.bestAccuracy) rec.bestAccuracy = result.accuracy;
+    }
+    saveRecord(rec);
+    return rec;
+  }
+
+  function averageAccuracy(rec) {
+    return rec.graded ? rec.sumAccuracy / rec.graded : null;
+  }
+
+  KZ.Grade = {
+    GRADE_DEPTH: GRADE_DEPTH,
+    BANDS: BANDS,
+    newCard: newCard,
+    assess: assess,
+    record: record,
+    summarise: summarise,
+    actionKey: actionKey,
+    loadRecord: loadRecord,
+    saveRecord: saveRecord,
+    commitMatch: commitMatch,
+    averageAccuracy: averageAccuracy
+  };
+})(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
+
+
+/* ===== js/cloud.js ===== */
+/* Kwanza Square — talking to the leaderboard.
+ *
+ * The key below is the PUBLISHABLE key. It is meant to be readable by anyone
+ * holding the game, and it grants nothing: the tables refuse it entirely (row
+ * level security with no policies), and the only things it may call are three
+ * read-only functions and the submit endpoint, which re-proves every game
+ * before storing it. There is no secret in this file and there must never be.
+ *
+ * No SDK — plain fetch, so the game keeps its "no dependencies" promise.
+ */
+(function (KZ) {
+  'use strict';
+
+  var CONFIG = {
+    url: 'https://ftnrcogoynentmvoolsi.supabase.co',
+    key: 'sb_publishable_7Bt97jGxR838TH5Iivo9xQ_AcmsSdNB'
+  };
+
+  var STORE = 'kwanza-cloud';
+  var TIMEOUT = 12000;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+  }
+  function save(patch) {
+    var s = Object.assign(load(), patch);
+    try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) {}
+    return s;
+  }
+
+  /** A random id for this device. Not personal — it only guards handle claims. */
+  function deviceId() {
+    var s = load();
+    if (s.deviceId) return s.deviceId;
+    var id;
+    try {
+      id = crypto.randomUUID();
+    } catch (e) {
+      id = 'dev-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+    save({ deviceId: id });
+    return id;
+  }
+
+  function handle() { return load().handle || null; }
+  function setHandle(h) { save({ handle: h }); }
+  function forget() {
+    try { localStorage.removeItem(STORE); } catch (e) {}
+  }
+
+  function request(path, options) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, TIMEOUT);
+    return fetch(CONFIG.url + path, Object.assign({
+      signal: controller.signal,
+      headers: {
+        apikey: CONFIG.key,
+        Authorization: 'Bearer ' + CONFIG.key,
+        'Content-Type': 'application/json'
+      }
+    }, options)).then(function (res) {
+      clearTimeout(timer);
+      return res.json().catch(function () { return null; }).then(function (body) {
+        if (!res.ok) {
+          var err = new Error((body && (body.error || body.message)) || ('request failed (' + res.status + ')'));
+          err.status = res.status;
+          throw err;
+        }
+        return body;
+      });
+    }, function (e) {
+      clearTimeout(timer);
+      throw new Error(e.name === 'AbortError' ? 'The leaderboard did not answer. Check your connection.' : 'Could not reach the leaderboard.');
+    });
+  }
+
+  function rpc(fn, args) {
+    return request('/rest/v1/rpc/' + fn, { method: 'POST', body: JSON.stringify(args || {}) });
+  }
+
+  // ------------------------------------------------------------------ public
+
+  function isHandleFree(name) {
+    return rpc('handle_available', { p_handle: name });
+  }
+
+  function leaderboard(level, period, limit) {
+    return rpc('leaderboard', { p_level: level, p_period: period || 'all', p_limit: limit || 100 });
+  }
+
+  /**
+   * Which periods the database actually understands.
+   *
+   * This matters more than it looks. period_start() falls back to all-time for
+   * any period it does not recognise, so offering a tab the server has never
+   * heard of would show all-time results under the wrong heading — wrong, and
+   * wrong in a way nobody would notice. So the app asks first, and simply omits
+   * any tab the server cannot honour. Older deployments lose a tab; none of
+   * them lie. Asked once per session and cached.
+   */
+  var periodsPromise = null;
+  function periods() {
+    if (!periodsPromise) {
+      periodsPromise = rpc('supported_periods').then(function (list) {
+        return (list && list.length) ? list : FALLBACK_PERIODS;
+      }, function () {
+        // An old database has no such function. Fall back to what it has always
+        // known, rather than to nothing.
+        return FALLBACK_PERIODS;
+      });
+    }
+    return periodsPromise;
+  }
+  var FALLBACK_PERIODS = ['week', 'month', 'year', 'all'];
+
+  function standing(name, level, period) {
+    return rpc('my_standing', { p_handle: name, p_level: level, p_period: period || 'all' })
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  /**
+   * Send a finished match. `state` is the engine's own state — the full action
+   * log travels with it, and the server decides what actually happened.
+   */
+  function submit(state, humanSide, name) {
+    return request('/functions/v1/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        handle: name,
+        deviceId: deviceId(),
+        level: state.difficulty,
+        pawns: state.pawnsPerSide,
+        roundsToWin: state.roundsToWin,
+        humanSide: humanSide,
+        actionLog: state.actionLog
+      })
+    });
+  }
+
+  KZ.Cloud = {
+    CONFIG: CONFIG,
+    deviceId: deviceId,
+    handle: handle,
+    setHandle: setHandle,
+    forget: forget,
+    isHandleFree: isHandleFree,
+    leaderboard: leaderboard,
+    periods: periods,
+    standing: standing,
+    submit: submit
+  };
+})(window.KZ = window.KZ || {});
+
+
+/* ===== js/celebrate.js ===== */
+/* Kwanza Square — winning should feel like winning.
+ *
+ * A canvas overlay for the moments that matter: confetti in the board's own
+ * colours when you take a round or a match, and something quieter and more
+ * dignified when you lose — dust settling rather than a mockery.
+ *
+ * Canvas rather than SVG or DOM nodes: a few hundred moving pieces at 60fps on
+ * a cheap phone is exactly what canvas is for.
+ */
+(function (KZ) {
+  'use strict';
+
+  var canvas = null, ctx = null, bits = [], raf = 0, W = 0, H = 0;
+
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  // the painted board's palette, so a celebration still looks like this game
+  var GOLD   = ['#FFE9A8', '#E9B833', '#D4A017', '#8A6408'];
+  var BOARD  = ['#E4711E', '#F79438', '#1B4BA8', '#FFFFFF'];
+  var ASH    = ['#6E7A88', '#49525C', '#2A3038', '#8A94A0'];
+
+  function surface() {
+    if (canvas) return;
+    canvas = document.createElement('canvas');
+    canvas.className = 'fx-canvas';
+    canvas.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+  }
+
+  function resize() {
+    if (!canvas) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+
+  function spray(n, origin, opts) {
+    for (var i = 0; i < n; i++) {
+      var angle = opts.angle + (Math.random() - 0.5) * opts.spread;
+      var speed = opts.speed * (0.55 + Math.random() * 0.75);
+      bits.push({
+        x: origin.x, y: origin.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        g: opts.gravity,
+        drag: opts.drag,
+        size: opts.size * (0.6 + Math.random() * 0.8),
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.34,
+        colour: pick(opts.palette),
+        ribbon: Math.random() < 0.68,
+        life: opts.life * (0.75 + Math.random() * 0.5),
+        age: 0
+      });
+    }
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+    var alive = 0;
+
+    for (var i = 0; i < bits.length; i++) {
+      var b = bits[i];
+      b.age += 1 / 60;
+      if (b.age > b.life) continue;
+      alive++;
+
+      b.vy += b.g;
+      b.vx *= b.drag;
+      b.vy *= b.drag;
+      b.x += b.vx;
+      b.y += b.vy;
+      b.rot += b.vr;
+
+      var fade = 1 - Math.pow(b.age / b.life, 3);
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      ctx.fillStyle = b.colour;
+      if (b.ribbon) {
+        // a flat ribbon that flutters: the width breathes as it spins
+        var w = b.size * (0.35 + 0.65 * Math.abs(Math.cos(b.rot * 1.7)));
+        ctx.fillRect(-w / 2, -b.size / 2, w, b.size);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, b.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if (alive > 0) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      bits.length = 0;
+      ctx.clearRect(0, 0, W, H);
+      raf = 0;
+    }
+  }
+
+  function run() {
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  function buzz(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+  }
+
+  /**
+   * A win. `big` for taking the whole match rather than a single round —
+   * two cannons and a second wave instead of one modest burst.
+   */
+  function win(big) {
+    if (reducedMotion()) { buzz(big ? [18, 50, 18] : [14]); return; }
+    surface();
+    var palette = GOLD.concat(BOARD);
+
+    // Gravity is deliberately light and the launch fast: the pieces have to
+    // actually cross the screen. Anything slower just piles up in the corners.
+    var base = {
+      angle: -Math.PI / 2, spread: 1.15, gravity: 0.22, drag: 0.994,
+      size: big ? 15 : 12, life: big ? 3.1 : 2.4, palette: palette
+    };
+
+    // cannons from the bottom corners, aimed inward and up
+    spray(big ? 74 : 46, { x: -10, y: H + 10 }, Object.assign({}, base, { angle: -Math.PI / 3.1, speed: big ? 31 : 25 }));
+    spray(big ? 74 : 46, { x: W + 10, y: H + 10 }, Object.assign({}, base, { angle: -Math.PI + Math.PI / 3.1, speed: big ? 31 : 25 }));
+
+    // A fall from above rather than a burst over the middle — an explosion at
+    // centre screen lands squarely on the result text and hides it.
+    function rain(n) {
+      for (var i = 0; i < n; i++) {
+        bits.push({
+          x: Math.random() * W,
+          y: -20 - Math.random() * 140,
+          vx: (Math.random() - 0.5) * 1.6,
+          vy: 1.6 + Math.random() * 2.6,
+          g: 0.05, drag: 0.999,
+          size: base.size * (0.6 + Math.random() * 0.7),
+          rot: Math.random() * Math.PI * 2,
+          vr: (Math.random() - 0.5) * 0.3,
+          colour: pick(palette),
+          ribbon: Math.random() < 0.7,
+          life: 3.6, age: 0
+        });
+      }
+    }
+    rain(big ? 46 : 24);
+
+    if (big) {
+      setTimeout(function () {
+        spray(48, { x: W * 0.22, y: H + 10 }, Object.assign({}, base, { angle: -Math.PI / 2.5, speed: 29 }));
+        spray(48, { x: W * 0.78, y: H + 10 }, Object.assign({}, base, { angle: -Math.PI + Math.PI / 2.5, speed: 29 }));
+        rain(30);
+        run();
+      }, 480);
+    }
+
+    buzz(big ? [20, 60, 20, 60, 40] : [16]);
+    run();
+  }
+
+  /**
+   * A loss. Not a punishment — ash drifting down and settling. The player is
+   * told how well they played; the screen shouldn't jeer at them.
+   */
+  function defeat() {
+    if (reducedMotion()) { buzz([26]); return; }
+    surface();
+    for (var i = 0; i < 34; i++) {
+      bits.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * H * 0.4,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: 0.7 + Math.random() * 0.9,
+        g: 0.004, drag: 0.999,
+        size: 5 + Math.random() * 7,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.05,
+        colour: pick(ASH),
+        ribbon: Math.random() < 0.4,
+        life: 3.4 + Math.random() * 1.4,
+        age: 0
+      });
+    }
+    buzz([28]);
+    run();
+  }
+
+  function stop() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    bits.length = 0;
+    if (ctx) ctx.clearRect(0, 0, W, H);
+  }
+
+  KZ.Celebrate = { win: win, defeat: defeat, stop: stop };
+})(window.KZ = window.KZ || {});
+
+
 /* ===== js/render.js ===== */
 /* Kwanza Square — board rendering.
  *
