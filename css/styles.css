@@ -939,7 +939,10 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   color: rgba(247,243,233,.55);
 }
 .home-board-cta .cta-note b { color: var(--gold-lift); font-weight: 800; }
-.home-board-cta .btn { flex: 0 0 auto; }
+/* This is the button that puts someone on the leaderboard at all — right now
+   it is the most important control on the home screen, and it measured 38px.
+   It is a small button by design, so it gets the height without the width. */
+.home-board-cta .btn { flex: 0 0 auto; min-height: var(--tap); }
 
 .home-board-note {
   margin-top: 9px; padding-top: 8px;
