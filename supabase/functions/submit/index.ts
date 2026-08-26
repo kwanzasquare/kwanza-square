@@ -18,7 +18,14 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const HANDLE = /^[A-Za-z0-9_]{3,16}$/;
+// Latin letters with diacritics are allowed so people can use their own names —
+// Kouamé, Stéphane, Aké. Deliberately NOT all Unicode: the leaderboard enforces
+// uniqueness, so a handle is an identity, and "Kwaku" written with a Cyrillic а
+// renders identically to the Latin one. Allowing every script would let somebody
+// register a perfect visual copy of whoever is top of the board. U+00D7 and
+// U+00F7 are skipped because they are the multiplication and division signs,
+// which sit inside the Latin-1 letter block without being letters.
+const HANDLE = /^[A-Za-z0-9_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F]{3,16}$/;
 
 // Handles nobody should be able to claim.
 const RESERVED = new Set([
@@ -80,7 +87,12 @@ Deno.serve(async (req) => {
     return json({ error: "malformed request" }, 400);
   }
 
-  const handle = String(body?.handle ?? "").trim();
+  // NFC first. "é" can arrive as one code point or as e plus a combining accent:
+  // identical on screen, different strings, so without this both could be
+  // claimed and the board would show two players with the same visible name.
+  // This function is the only writer to `players`, so normalising here is the
+  // single point that has to get it right.
+  const handle = String(body?.handle ?? "").normalize("NFC").trim();
   const deviceId = String(body?.deviceId ?? "").trim();
 
   if (!HANDLE.test(handle)) {

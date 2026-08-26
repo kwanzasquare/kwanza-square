@@ -117,6 +117,29 @@
   }
   var FALLBACK_PERIODS = ['week', 'month', 'year', 'all'];
 
+  /**
+   * The handle rule, as the database actually enforces it.
+   *
+   * The app used to carry its own copy of this pattern, which meant the two
+   * could disagree — and the way they disagree matters: a name accepted here
+   * but refused by the server is only discovered at submit, after the player
+   * has finished three matches. So the rule is read from the one place that
+   * enforces it. An older database has no such function and falls back to the
+   * original ASCII pattern, which is exactly what it still enforces.
+   */
+  var FALLBACK_HANDLE = '^[A-Za-z0-9_]{3,16}$';
+  var handlePatternPromise = null;
+  function handlePattern() {
+    if (!handlePatternPromise) {
+      handlePatternPromise = rpc('handle_pattern').then(function (p) {
+        return (typeof p === 'string' && p) ? p : FALLBACK_HANDLE;
+      }, function () {
+        return FALLBACK_HANDLE;
+      });
+    }
+    return handlePatternPromise;
+  }
+
   function standing(name, level, period) {
     return rpc('my_standing', { p_handle: name, p_level: level, p_period: period || 'all' })
       .then(function (rows) { return (rows && rows[0]) || null; });
@@ -150,6 +173,7 @@
     isHandleFree: isHandleFree,
     leaderboard: leaderboard,
     periods: periods,
+    handlePattern: handlePattern,
     standing: standing,
     submit: submit
   };

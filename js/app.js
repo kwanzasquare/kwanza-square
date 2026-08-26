@@ -1047,12 +1047,40 @@
     });
   }
 
+  // The handle rule, fetched from the database so the app and the server can
+  // never disagree. Until it answers, the strict ASCII rule applies — a name
+  // wrongly refused can be retyped, whereas a name wrongly accepted is only
+  // discovered at submit, after three matches have been played.
+  var STRICT_HANDLE = /^[A-Za-z0-9_]{3,16}$/;
+  var handleRule = STRICT_HANDLE;
+  var handleAllowsAccents = false;
+
+  function loadHandleRule() {
+    if (!C || !C.handlePattern) return;
+    C.handlePattern().then(function (pattern) {
+      try {
+        handleRule = new RegExp(pattern);
+        handleAllowsAccents = handleRule.test('Kouamé');
+      } catch (e) {
+        // A pattern this app cannot compile is not a reason to lock anyone out.
+        handleRule = STRICT_HANDLE;
+        handleAllowsAccents = false;
+      }
+    }, function () {});
+  }
+
+  function handleHint() {
+    return handleAllowsAccents
+      ? '3 to 16 letters, numbers or underscores. Accents are welcome — Kouamé, Stéphane.'
+      : '3 to 16 letters, numbers or underscores.';
+  }
+
   /** Ask for a name the first time someone submits. */
   function askForHandle() {
     return new Promise(function (resolve) {
       openModal(
         '<h2>Choose your name</h2><div class="modal-body">' +
-        '<p>This is the name that appears on the leaderboard. 3 to 16 letters, numbers or underscores.</p>' +
+        '<p>This is the name that appears on the leaderboard. ' + handleHint() + '</p>' +
         '<input id="handle-input" class="text-input" maxlength="16" autocomplete="off" ' +
         'autocapitalize="off" spellcheck="false" placeholder="e.g. Abidjan_Ken">' +
         '<p class="hint" id="handle-note">No email, no password — the name is all we keep.</p></div>',
@@ -1061,9 +1089,12 @@
           { label: 'Claim it', cls: 'btn-gold', onClick: function () {
             var input = $('#handle-input');
             var note = $('#handle-note');
-            var name = (input.value || '').trim();
-            if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) {
-              note.textContent = '3 to 16 letters, numbers or underscores.';
+            // NFC so that an accent typed as a combining character matches the
+            // same name typed precomposed — identical on screen, and the server
+            // normalises the same way before storing it.
+            var name = (input.value || '').normalize('NFC').trim();
+            if (!handleRule.test(name)) {
+              note.textContent = handleHint();
               return;
             }
             note.textContent = 'Checking…';
@@ -1222,6 +1253,7 @@
       });
     });
     revealSupportedPeriods();
+    loadHandleRule();
     loadHomeBoard();
     $('#btn-lb-back').addEventListener('click', function () { showScreen('screen-home'); });
     $all('[data-lb-level]').forEach(function (b) {
