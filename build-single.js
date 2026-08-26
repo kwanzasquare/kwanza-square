@@ -47,19 +47,33 @@ if (start === -1 || end === -1) {
 }
 const markup = index.slice(start, end + '</div>'.length);
 
-const TITLE = 'Kwanza Square';
-const DESCRIPTION = 'A mystical African traditional game of wit and strategic thinking.';
+// The head is READ FROM index.html too, for the same reason the script list is.
+// It used to be hand-copied here, which is the identical drift trap: add a meta
+// tag or an icon to the page and the bundle silently keeps the old head.
+//
+// Two things have to change on the way in, because a standalone file cannot
+// fetch anything:
+//   - the stylesheet <link> goes, since the CSS is inlined further down;
+//   - icon hrefs become data: URIs, so the file carries its own artwork.
+const dataUri = (file, mime) =>
+  'data:' + mime + ';base64,' + fs.readFileSync(path.join(root, file)).toString('base64');
 
-const head = [
-  '<meta charset="utf-8">',
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">',
-  '<meta name="theme-color" content="#0A0A0A">',
-  '<meta name="description" content="' + DESCRIPTION + '">',
-  '<meta name="apple-mobile-web-app-capable" content="yes">',
-  '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
-  '<meta name="mobile-web-app-capable" content="yes">',
-  '<title>' + TITLE + '</title>'
-].join('\n');
+const MIME = { '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+
+const head = index
+  .slice(0, index.indexOf('<div id="app">'))
+  .replace(/<link\s+rel="stylesheet"[^>]*>\s*/g, '')
+  .replace(/href="([^"]+\.(?:svg|png|ico))"/g, (whole, file) => {
+    const mime = MIME[path.extname(file).toLowerCase()];
+    if (!mime) return whole;
+    try {
+      return 'href="' + dataUri(file, mime) + '"';
+    } catch (e) {
+      console.error('Icon referenced by index.html is missing: ' + file);
+      process.exit(1);
+    }
+  })
+  .trim();
 
 const body = markup + '\n\n<style>\n' + css + '\n</style>\n\n<script>\n' + scripts + '\n</script>\n';
 
@@ -68,11 +82,28 @@ const standalone =
 
 // The artifact host supplies <!doctype>/<html>/<head>/<body> itself, so the
 // page content is written directly. The viewport meta is kept — browsers honour
-// it from the body and mobile layout depends on it.
-const artifact =
-  '<title>' + TITLE + '</title>\n' +
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">\n' +
-  '<meta name="theme-color" content="#0A0A0A">\n\n' + body;
+// it from the body and mobile layout depends on it. Only the charset goes,
+// since that is the host document's business rather than this fragment's.
+const artifact = head.replace(/<meta\s+charset="[^"]*">\s*/i, '') + '\n\n' + body;
+
+// Any src/href that is not a data: URI or a #fragment is something this file
+// would have to go and fetch. The check used to look only for `https?:`, which
+// let a plain relative path like href="favicon.svg" pass as self-contained when
+// it is exactly the opposite — a request that resolves to nothing once the file
+// is emailed or opened from disk.
+//
+// This runs BEFORE anything is written. A bundle that fails the check is not a
+// bundle worth leaving on disk for someone to pick up and ship by mistake.
+const external = [...standalone.matchAll(/(?:src|href)="([^"]*)"/g)]
+  .map(m => m[1])
+  .filter(v => !/^(data:|#)/.test(v));
+
+if (external.length) {
+  console.error('NOT self-contained — these would be fetched at runtime:');
+  external.forEach(v => console.error('  ' + v.slice(0, 80)));
+  console.error('Nothing written.');
+  process.exit(1);
+}
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist/kwanza-square.html'), standalone);
@@ -81,4 +112,4 @@ fs.writeFileSync(path.join(root, 'dist/artifact-page.html'), artifact);
 const kb = n => (n / 1024).toFixed(0) + ' KB';
 console.log('dist/kwanza-square.html  ' + kb(standalone.length) + '  (standalone, self-contained)');
 console.log('dist/artifact-page.html  ' + kb(artifact.length) + '  (for publishing)');
-console.log('No external requests: ' + (/(src|href)=["']https?:/.test(standalone) ? 'NO — found a remote URL' : 'confirmed'));
+console.log('No external requests: confirmed');

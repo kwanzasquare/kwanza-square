@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="Kwanza Square">
+  <!-- The board, reduced to what survives a 16px browser tab: two squares,
+       four spokes, and the sacred centre. The real board has three rings and
+       24 intersections; at favicon size those collapse into a smudge, so the
+       mark keeps the silhouette and drops the detail. -->
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1D1D1D"/>
+      <stop offset="1" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <radialGradient id="sacred" cx="38%" cy="32%">
+      <stop offset="0" stop-color="#F0BB35"/>
+      <stop offset="65%" stop-color="#D4A017"/>
+      <stop offset="1" stop-color="#9A7310"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="1000" rx="190" fill="url(#ground)"/>
+
+  <g fill="none" stroke="#E4711E" stroke-width="72" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M500 130 V330 M500 670 V870 M130 500 H330 M670 500 H870"/>
+    <rect x="130" y="130" width="740" height="740" rx="18"/>
+    <rect x="330" y="330" width="340" height="340" rx="12"/>
+  </g>
+
+  <circle cx="500" cy="500" r="118" fill="url(#sacred)" stroke="#0A0A0A" stroke-width="34"/>
+</svg>
