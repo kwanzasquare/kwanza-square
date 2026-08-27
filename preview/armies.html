@@ -5,33 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kwanza Square — the two armies</title>
 <style>
-  body {
-    margin:0; padding:26px 20px 70px; background:#0A0A0A; color:#F7F3E9;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  }
+  body { margin:0; padding:26px 20px 70px; background:#0A0A0A; color:#F7F3E9;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
   h1 { font-size:21px; margin:0 0 6px; }
-  .lede { color:rgba(247,243,233,.6); font-size:14px; line-height:1.6; max-width:44rem; margin:0 0 26px; }
+  .lede { color:rgba(247,243,233,.62); font-size:14px; line-height:1.6; max-width:44rem; margin:0 0 26px; }
   h2 { font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#D4A017;
-       margin:32px 0 14px; border-top:1px solid rgba(212,160,23,.25); padding-top:15px; }
+       margin:34px 0 14px; border-top:1px solid rgba(212,160,23,.25); padding-top:15px; }
   .board { background:radial-gradient(circle at 50% 42%, #2B4FC7, #1E3A9E);
-           border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:12px; }
-  .caption { font-size:10px; letter-spacing:.1em; text-transform:uppercase;
-             color:rgba(247,243,233,.35); margin:7px 0 18px; }
+           border-radius:10px; padding:12px 16px; display:flex; align-items:center;
+           gap:14px; flex-wrap:wrap; }
+  .caption { font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+             color:rgba(247,243,233,.38); margin:8px 0 18px; }
   .pair { display:flex; gap:18px; flex-wrap:wrap; }
-  .who { font-size:12.5px; color:rgba(247,243,233,.6); margin:0 0 8px; line-height:1.5; }
+  .who { font-size:12.5px; color:rgba(247,243,233,.62); margin:0 0 8px; line-height:1.5; }
   .who b { color:#F7F3E9; }
   table { border-collapse:collapse; }
   td { padding:5px 9px; }
-  td.lab { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(247,243,233,.4); }
+  td.lab { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(247,243,233,.42); }
+  svg { display:block; overflow:visible; }
 </style>
 </head>
 <body>
+
 <h1>The two armies</h1>
 <p class="lede">
-  Both sides are the standing warrior. They differ in shape as well as colour, because
-  colour alone fails anyone colour-blind, anyone on a dim phone, and anyone across a room
-  from a television. The difference sits at the <em>top</em> of the piece — the part a thumb
-  never covers.
+  Both sides are the standing warrior, and both stand on their feet. They
+  differ in shape as well as colour, because colour alone fails anyone
+  colour-blind, anyone on a dim phone, and anyone across a room from a
+  television. The difference sits at the <em>top</em> of the piece — the part
+  a thumb never covers.
 </p>
 
 <div class="pair">
@@ -46,13 +48,14 @@
 </div>
 
 <h2>Actual size on a phone</h2>
-<div class="board" id="tiny"></div>
-<div class="caption">this is the view that decides it — the two ranks lean towards each other</div>
+<div class="board" id="strip"></div>
+<p class="caption">This is the view that decides it — the two ranks lean towards each other</p>
 
 <h2>Every colourway</h2>
-<table id="ways"></table>
+<table id="grid"></table>
 
 <script>
+/* ===== js/geometry.js ===== */
 /* Kwanzaa Square — board geometry.
  *
  * Three concentric squares, 8 playable intersections each = 24 nodes.
@@ -162,8 +165,8 @@
   };
 })(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
 
-</script>
-<script>
+
+/* ===== js/render.js ===== */
 /* Kwanza Square — board rendering.
  *
  * Everything you see is generated here as SVG: the three squares, the radial
@@ -539,6 +542,18 @@
   var WARRIOR_BODY = [
     ['circle', { cy: -29, r: 9 }],
     ['rect', { x: -4.8, y: -24, width: 9.6, height: 10 }],
+    // Feet. Martin asked for soldiers standing on their feet and Kenneth
+    // agreed: the body tapered to a single point, which is the silhouette of
+    // a chess pawn rather than a person. These sit either side of that tip so
+    // the shape widens at the base the way someone standing does.
+    //
+    // They are listed BEFORE the body on purpose. Every part is drawn twice —
+    // once as a 6.5-wide rim stroke, then filled — so the body, coming after,
+    // covers the tops of both feet. What is left showing is the part that
+    // reads as a foot. Kept small for the same reason: the rim adds about 6.5
+    // units in every direction, so 8.5 wide on paper is nearer 15 on screen.
+    ['rect', { x: -13, y: 32.5, width: 9, height: 4.5, rx: 2.2 }],
+    ['rect', { x: 4, y: 32.5, width: 9, height: 4.5, rx: 2.2 }],
     ['path', { d: 'M 0 -17 C 12.5 -14, 17.5 -3, 17.5 7 C 17.5 19, 10.5 31, 0 33 C -10.5 31, -17.5 19, -17.5 7 C -17.5 -3, -12.5 -14, 0 -17 Z' }]
   ];
 
@@ -911,69 +926,60 @@
 
 </script>
 <script>
-var R = KZ.Render, NS = 'http://www.w3.org/2000/svg';
+(function () {
+  var R = window.KZ.Render;
+  var NS = 'http://www.w3.org/2000/svg';
 
-// One shared <defs> holding the sphere gradient for every colourway, so the
-// real pawnShape() can be called exactly as the game calls it.
-var host = document.createElementNS(NS, 'svg');
-host.setAttribute('width', 0); host.setAttribute('height', 0);
-host.style.position = 'absolute';
-var defs = document.createElementNS(NS, 'defs');
-host.appendChild(defs);
-document.body.appendChild(host);
+  // One shared defs block: pawnShape() fills from gradients that live under a
+  // prefix, so the page has to provide the same ones the board does.
+  function svg(size, pad) {
+    var s = document.createElementNS(NS, 'svg');
+    var half = 26 + (pad || 0);
+    s.setAttribute('viewBox', -half + ' ' + (-half - 22) + ' ' + (half * 2) + ' ' + (half * 2 + 26));
+    s.setAttribute('width', size);
+    s.setAttribute('height', size * 1.12);
+    return s;
+  }
 
-Object.keys(R.SOLDIERS).forEach(function (key) {
-  var s = R.SOLDIERS[key];
-  var g = document.createElementNS(NS, 'radialGradient');
-  g.setAttribute('id', 'pv-s-' + key);
-  g.setAttribute('cx', '34%'); g.setAttribute('cy', '30%'); g.setAttribute('r', '76%');
-  [[0, s.light], [46, s.mid], [100, s.dark]].forEach(function (stop) {
-    var st = document.createElementNS(NS, 'stop');
-    st.setAttribute('offset', stop[0] + '%');
-    st.setAttribute('stop-color', stop[1]);
-    g.appendChild(st);
+  function pawn(host, colour, side, size, pad) {
+    var s = svg(size, pad);
+    // Borrow the board's own defs by building a throwaway board once.
+    var defs = window.__kzDefs;
+    if (!defs) {
+      var probe = document.createElementNS(NS, 'svg');
+      R.emblem(probe);
+      defs = window.__kzDefs = probe.querySelector('defs');
+    }
+    s.appendChild(defs.cloneNode(true));
+    var prefix = defs.querySelector('linearGradient, radialGradient').id.split('-')[0];
+    s.appendChild(R.pawnShape(colour, prefix, side));
+    host.appendChild(s);
+  }
+
+  pawn(document.getElementById('big-a'), 'gold', 'A', 132, 6);
+  pawn(document.getElementById('big-b'), 'jade', 'B', 132, 6);
+
+  var strip = document.getElementById('strip');
+  ['gold', 'gold', 'jade', 'gold', 'jade'].forEach(function (c, i) {
+    pawn(strip, c, i % 2 ? 'B' : 'A', 30, 2);
   });
-  defs.appendChild(g);
-});
 
-function soldier(way, side, px) {
-  var svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', '-46 -56 92 96');
-  svg.setAttribute('width', px);
-  svg.setAttribute('height', px * 96 / 92);
-  svg.appendChild(R.pawnShape(way, 'pv', side));
-  return svg;
-}
-
-function fill(id, way, side, px, n) {
-  var host = document.getElementById(id);
-  for (var i = 0; i < (n || 1); i++) host.appendChild(soldier(way, side, px));
-}
-
-fill('big-a', 'gold', 'A', 150);
-fill('big-b', 'jade', 'B', 150);
-
-['gold','jade','gold','jade','gold','jade'].forEach(function (way, i) {
-  document.getElementById('tiny').appendChild(soldier(way, i % 2 ? 'B' : 'A', 24));
-});
-
-var table = document.getElementById('ways');
-Object.keys(R.SOLDIERS).forEach(function (key) {
-  var tr = document.createElement('tr');
-  var td0 = document.createElement('td');
-  td0.className = 'lab'; td0.textContent = R.SOLDIERS[key].label;
-  tr.appendChild(td0);
-  ['A','B'].forEach(function (side) {
-    [62, 24].forEach(function (px) {
+  var grid = document.getElementById('grid');
+  ['gold', 'silver', 'jade', 'crimson', 'ivory', 'onyx'].forEach(function (c) {
+    var tr = document.createElement('tr');
+    var lab = document.createElement('td');
+    lab.className = 'lab';
+    lab.textContent = c;
+    tr.appendChild(lab);
+    [['A', 74], ['A', 30], ['B', 74], ['B', 30]].forEach(function (cfg) {
       var td = document.createElement('td');
       td.style.background = 'radial-gradient(circle at 50% 42%, #2B4FC7, #1E3A9E)';
-      td.style.borderRadius = '7px';
-      td.appendChild(soldier(key, side, px));
+      pawn(td, c, cfg[0], cfg[1], 3);
       tr.appendChild(td);
     });
+    grid.appendChild(tr);
   });
-  table.appendChild(tr);
-});
+}());
 </script>
 </body>
 </html>
