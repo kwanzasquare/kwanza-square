@@ -510,7 +510,27 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 /* --------------------------------------------------------------- board bits */
 
 .node-hit { cursor: pointer; fill: transparent; }
+/* The painted motifs sit BEHIND the game, not in it.
+ *
+ * Kenneth played his first match and could not tell decoration from rules —
+ * he kept wondering whether a symbol made a square special. The fix is not to
+ * delete the artwork, which is the thing that makes this board Martin's rather
+ * than any nine-men's-morris board. The fix is that a motif was as bright and
+ * as sharp as a soldier, so the eye read both as controls.
+ *
+ * Pushed back, they stop looking like buttons and start looking like a painted
+ * board. Nothing is lost and the question stops being asked. */
+.tile-motif { opacity: .42; }
+
 .node-seat { transition: fill .2s ease, opacity .2s ease; }
+
+/* A soldier fell here. Faint by design — see the note in render.js. */
+.prisoner-mark { transition: opacity .45s ease; }
+.prisoner-mark-art { animation: prisoner-set .5s ease-out; transform-origin: center; transform-box: fill-box; }
+@keyframes prisoner-set {
+  from { opacity: 0; transform: scale(1.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
 .node.legal .node-halo { opacity: 1; animation: legal-pulse 1.5s ease-in-out infinite; }
 .node-halo { opacity: 0; pointer-events: none; }

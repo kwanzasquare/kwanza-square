@@ -310,7 +310,7 @@
       x: -TILE / 2, y: -TILE / 2, width: TILE, height: TILE, rx: 6,
       fill: BOARD.black, stroke: BOARD.white, 'stroke-width': 2.5
     }, tile);
-    el('g', null, tile).innerHTML = motifFor(node.id);
+    el('g', { class: 'tile-motif' }, tile).innerHTML = motifFor(node.id);
 
     el('circle', {
       class: 'node-halo', r: 40, fill: 'none',
@@ -326,6 +326,10 @@
     el('circle', { r: 26, fill: 'rgba(0,0,0,.55)' }, forbid);
     el('line', { x1: -13, y1: -13, x2: 13, y2: 13, stroke: '#FF6B6B', 'stroke-width': 5, 'stroke-linecap': 'round' }, forbid);
     el('line', { x1: 13, y1: -13, x2: -13, y2: 13, stroke: '#FF6B6B', 'stroke-width': 5, 'stroke-linecap': 'round' }, forbid);
+
+    // Where a soldier fell. Above the painted tile so it is visible at all,
+    // below the soldier so a new arrival stands on top of the old grave.
+    el('g', { class: 'prisoner-slot', 'pointer-events': 'none' }, g);
 
     el('g', { class: 'pawn-slot' }, g);
     // drawn after the pawn so a scored trio reads clearly on top of the soldier
@@ -389,6 +393,7 @@
     return {
       svg: svg, prefix: prefix, nodes: nodeEls,
       trioLayer: trioLayer, fxLayer: fxLayer,
+      prisoners: [],
       owners: new Array(24).fill(null),
       soldier: { A: 'gold', B: 'jade' }
     };
@@ -547,6 +552,74 @@
     }, { once: true });
   }
 
+  /* Prisoner marks — Martin's idea, and the board is better for it.
+   *
+   * A capture used to be a number climbing in the score bar. Now it leaves
+   * something where it happened, so a glance at the board tells you where the
+   * fighting has been, which corner you are losing, and where neither side has
+   * dared to go.
+   *
+   * The whole difficulty is clutter. Fourteen soldiers can fall in a round
+   * across twenty-four intersections, and marks at full strength everywhere
+   * would bury the game under its own history — the same mistake as motifs
+   * that shout as loudly as the pieces. So the marks age: the newest is clear,
+   * older ones sink back toward a floor and stay as a faint residue. Recent
+   * history loud, old history quiet.
+   *
+   * Colour follows the soldier who FELL, not the one who took him. The mark is
+   * a casualty, so it should be in his colours.
+   */
+  var PRISONER_FLOOR = 0.22;   // an old mark never vanishes entirely
+  var PRISONER_TOP = 0.92;     // ...and the newest never shouts
+
+  function refreshPrisoners(view) {
+    var list = view.prisoners;
+    for (var i = 0; i < list.length; i++) {
+      // 0 = oldest, list.length-1 = newest
+      var age = list.length - 1 - i;
+      var o = PRISONER_TOP * Math.pow(0.74, age);
+      list[i].el.setAttribute('opacity', Math.max(PRISONER_FLOOR, o).toFixed(3));
+    }
+  }
+
+  function prisonerMark(view, nodeId, victim) {
+    var host = view.nodes[nodeId] && view.nodes[nodeId].querySelector('.prisoner-slot');
+    if (!host) return;
+    var s = SOLDIERS[view.soldier[victim]] || SOLDIERS.onyx;
+
+    // A node can lose more than one soldier in a match. Reuse the existing
+    // mark rather than stacking marks on the same spot, and treat it as new.
+    var existing = view.prisoners.filter(function (m) { return m.node === nodeId; })[0];
+    if (existing) {
+      view.prisoners.splice(view.prisoners.indexOf(existing), 1);
+      if (existing.el.parentNode) existing.el.parentNode.removeChild(existing.el);
+    }
+
+    // The node group already carries the position, so the mark needs none.
+    // The art lives in its own child because a CSS transform would override an
+    // SVG transform attribute outright, and the scale-in animation must not
+    // fight anything that positions the mark.
+    var g = el('g', { class: 'prisoner-mark' }, host);
+    var inner = el('g', { class: 'prisoner-mark-art' }, g);
+    el('circle', {
+      r: 19, fill: 'none', stroke: s.glow, 'stroke-width': 4.5,
+      'stroke-dasharray': '6 6.5', 'stroke-linecap': 'round'
+    }, inner);
+    el('circle', { r: 5.5, fill: s.glow }, inner);
+
+    view.prisoners.push({ node: nodeId, el: g });
+    refreshPrisoners(view);
+  }
+
+  /** New round: the dead of the last one do not haunt the next. */
+  function clearPrisoners(view) {
+    if (!view.prisoners) return;
+    view.prisoners.forEach(function (m) {
+      if (m.el.parentNode) m.el.parentNode.removeChild(m.el);
+    });
+    view.prisoners = [];
+  }
+
   /** Small emblem used on the home screen and the result card. */
   function emblem(svg) {
     var prefix = 'kz' + (++uid);
@@ -592,6 +665,8 @@
     update: update,
     setSoldiers: setSoldiers,
     burst: burst,
+    prisonerMark: prisonerMark,
+    clearPrisoners: clearPrisoners,
     emblem: emblem,
     chipStyle: chipStyle,
     motifFor: motifFor

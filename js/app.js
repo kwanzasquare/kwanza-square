@@ -169,7 +169,11 @@
       if (ev.type === 'move') { sfx.move(); R.trail(view, ev.from, ev.to); }
       if (ev.type === 'trio') { sfx.trio(); if (cards && cards[ev.player]) cards[ev.player].trios++; }
       if (ev.type === 'capture') {
-        sfx.capture(); R.burst(view, ev.node, ev.player);
+        sfx.capture();
+        R.burst(view, ev.node, ev.player);
+        // Leave a mark where he fell — Martin's idea. Coloured for the side
+        // that lost the soldier, not the side that took him.
+        R.prisonerMark(view, ev.node, ev.victim);
         if (cards && cards[ev.player]) cards[ev.player].captures++;
         if (cards && cards[ev.victim]) cards[ev.victim].lost++;
       }
@@ -479,6 +483,7 @@
           closeModal();
           KZ.Celebrate.stop();
           E.nextRound(state);
+          R.clearPrisoners(view);
           history = [];
           selected = null; staged = null;
           render();
@@ -1163,6 +1168,7 @@
     else { cards.A = Gr.newCard(); cards.B = Gr.newCard(); }
     if (!view) view = R.build($('#board'), onPick);
     if (view.soldier.B !== settings.opponent) R.setSoldiers(view, { A: 'gold', B: settings.opponent });
+    R.clearPrisoners(view);
     // Do NOT reset view.owners here: it is the record of what is actually drawn.
     // Clearing it would make the empty new board diff as "no change" and leave
     // the previous match's soldiers on screen. render() diffs it correctly.
