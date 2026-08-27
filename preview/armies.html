@@ -29,20 +29,25 @@
 
 <h1>The two armies</h1>
 <p class="lede">
-  Both sides are the standing warrior, and both stand on their feet. They
-  differ in shape as well as colour, because colour alone fails anyone
-  colour-blind, anyone on a dim phone, and anyone across a room from a
-  television. The difference sits at the <em>top</em> of the piece — the part
-  a thumb never covers.
+  Built from Martin's photograph rather than from a description of it: a
+  standing figure with a round featureless head, a long neck, two arms, two
+  legs and feet on the floor. No face, because the reference has none and
+  because at playing size two dots read as a speck of dirt.
+  <br><br>
+  The two sides differ in <em>shape</em> as well as colour — colour alone
+  fails anyone colour-blind, anyone on a dim phone, and anyone across a room
+  from a television. One stands with both arms down; the other rests a hand
+  on its hip, and that triangle of daylight under the elbow is still
+  recognisable long after the colour has stopped being.
 </p>
 
 <div class="pair">
   <div>
-    <p class="who"><b>First army</b> — spear on the right, plain headring.</p>
+    <p class="who"><b>First army</b> — both arms down, spear at the right side, plain headring.</p>
     <div class="board" id="big-a"></div>
   </div>
   <div>
-    <p class="who"><b>Second army</b> — knobkerrie on the left, single feather.</p>
+    <p class="who"><b>Second army</b> — left hand on the hip, knobkerrie, single feather.</p>
     <div class="board" id="big-b"></div>
   </div>
 </div>
@@ -539,44 +544,76 @@
    * outline traces the figure as a whole and no seam shows where the head
    * meets the neck or the neck meets the shield.
    */
+  /* The soldier is a person.
+   *
+   * This started as a shield with a head on it — a heraldic pawn. Martin sent
+   * a photograph of a smooth sculpted figure and asked, plainly, "can soldiers
+   * stand like this?" They can. What he is pointing at is not a pose but a
+   * body: round featureless head, long neck, slim torso, two arms, two legs,
+   * feet on the floor. Bolting feet onto a shield does not answer that, so the
+   * body is rebuilt from the figure outwards.
+   *
+   * No face. The reference has none, and at the size these are actually played
+   * two dots read as a bug on the screen rather than eyes.
+   *
+   * Everything is one closed silhouette per limb. Each part is stroked with a
+   * rim and then filled, so the rims of touching parts fuse into a single
+   * outline around the whole figure — which is what makes a pile of capsules
+   * read as one carved body rather than an exploded diagram.
+   */
   var WARRIOR_BODY = [
-    ['circle', { cy: -29, r: 9 }],
-    ['rect', { x: -4.8, y: -24, width: 9.6, height: 10 }],
-    // Feet. Martin asked for soldiers standing on their feet and Kenneth
-    // agreed: the body tapered to a single point, which is the silhouette of
-    // a chess pawn rather than a person. These sit either side of that tip so
-    // the shape widens at the base the way someone standing does.
-    //
-    // They are listed BEFORE the body on purpose. Every part is drawn twice —
-    // once as a 6.5-wide rim stroke, then filled — so the body, coming after,
-    // covers the tops of both feet. What is left showing is the part that
-    // reads as a foot. Kept small for the same reason: the rim adds about 6.5
-    // units in every direction, so 8.5 wide on paper is nearer 15 on screen.
-    ['rect', { x: -13, y: 32.5, width: 9, height: 4.5, rx: 2.2 }],
-    ['rect', { x: 4, y: 32.5, width: 9, height: 4.5, rx: 2.2 }],
-    ['path', { d: 'M 0 -17 C 12.5 -14, 17.5 -3, 17.5 7 C 17.5 19, 10.5 31, 0 33 C -10.5 31, -17.5 19, -17.5 7 C -17.5 -3, -12.5 -14, 0 -17 Z' }]
+    // Legs and hips as ONE path, with the gap between the legs cut into it.
+    // Two separate leg shapes would not survive: the rim is drawn 2.5 units
+    // either side of every edge, so two legs standing 3 units apart have their
+    // rims meet in the middle and fuse into a single block. Cutting the gap
+    // into one outline means the rim traces the inside of the notch too, and
+    // the daylight between the legs is still there at thumb size.
+    ['path', { d: 'M -10 -2 L -10 27 Q -10 32 -6 32 Q -2 32 -2 27 L -2 14 Q 0 11 2 14 L 2 27 Q 2 32 6 32 Q 10 32 10 27 L 10 -2 Z' }],
+    // Feet, splayed outward from the ankles the way the reference stands.
+    ['rect', { x: -15, y: 27.5, width: 11.5, height: 5.5, rx: 2.7 }],
+    ['rect', { x: 3.5, y: 27.5, width: 11.5, height: 5.5, rx: 2.7 }],
+    // Torso: wide at the shoulders, drawn in at the waist. Kept short — the
+    // reference is mostly leg, and a long torso on short legs is the one
+    // proportion that reads as a chess piece again rather than a person.
+    ['path', { d: 'M -10 -22 C -10 -25, -6 -26, 0 -26 C 6 -26, 10 -25, 10 -22 L 7.5 -1 C 7.5 2, 4 3, 0 3 C -4 3, -7.5 2, -7.5 -1 Z' }],
+    ['rect', { x: -3, y: -30, width: 6, height: 8 }],
+    ['circle', { cy: -36, r: 8.5 }]
   ];
 
+  // Arms belong to the army, not to the body: giving one side a hand on the
+  // hip is a difference of shape rather than colour, which is the whole point
+  // — it survives a colour-blind player, a dim phone and a television across
+  // the room. The triangle of daylight under a bent arm is recognisable long
+  // after the colour has stopped being.
+  var ARM_DOWN_LEFT = ['rect', { x: -15.5, y: -23, width: 5.6, height: 27, rx: 2.8 }];
+  var ARM_DOWN_RIGHT = ['rect', { x: 9.9, y: -23, width: 5.6, height: 27, rx: 2.8 }];
+
   var ARMIES = {
-    // the spear, held on the right, under a plain headring
+    // Both arms down, spear held against the right side, plain headring.
     A: {
       parts: [
-        ['rect', { x: 15, y: -34, width: 4.2, height: 68 }],
-        ['path', { d: 'M 17.1 -44 C 21.6 -39, 21.6 -33.5, 17.1 -29 C 12.6 -33.5, 12.6 -39, 17.1 -44 Z' }]
+        ['rect', { x: 16.8, y: -44, width: 3.8, height: 74 }],
+        ['path', { d: 'M 18.7 -53 C 22.5 -48.5, 22.5 -43.5, 18.7 -39 C 14.9 -43.5, 14.9 -48.5, 18.7 -53 Z' }],
+        ARM_DOWN_LEFT,
+        ARM_DOWN_RIGHT
       ],
       accents: [
-        ['path', { d: 'M -9 -34 L 9 -34', 'stroke-width': 3.2 }]
+        ['path', { d: 'M -8 -40.5 L 8 -40.5', 'stroke-width': 3 }]
       ]
     },
-    // the knobkerrie, held high on the left so its knob clears the head —
-    // level with the head it read as a second head — under a single feather
+    // Left hand on the hip, knobkerrie in the right, single feather. The bent
+    // arm is a closed shape rather than a stroked line, because every part
+    // here is rimmed and then filled — a bare line would fill as nothing.
     B: {
       parts: [
-        ['rect', { x: -19.2, y: -42, width: 4.2, height: 76 }],
-        ['circle', { cx: -17.1, cy: -47, r: 6.5 }],
-        ['path', { d: 'M 0 -50 C 4.5 -45, 5 -40, 2.5 -36 L -2.5 -36 C -5 -40, -4.5 -45, 0 -50 Z' }]
+        ['rect', { x: 16.8, y: -46, width: 3.8, height: 76 }],
+        ['circle', { cx: 18.7, cy: -52, r: 6.2 }],
+        ['path', { d: 'M -9.6 -24 C -14.4 -21.6, -17.4 -14, -17 -7 C -16.6 -1.4, -12.6 2.6, -8.2 3.2 L -8.2 -2.2 C -11 -2.8, -12.8 -4.6, -12.6 -7.4 C -12.3 -12, -10.6 -17.4, -6.4 -20.4 Z' }],
+        ARM_DOWN_RIGHT
       ],
-      accents: []
+      accents: [
+        ['path', { d: 'M 0 -58 C 4 -53, 4.4 -48.5, 2.2 -45 L -2.2 -45 C -4.4 -48.5, -4 -53, 0 -58 Z', 'stroke-width': 3 }]
+      ]
     }
   };
 
@@ -589,9 +626,17 @@
     g.setAttribute('class', 'pawn');
     var body = el('g', { class: 'pawn-body' }, g);
 
+    // Rim first for every part, then fill for every part. Doing it in that
+    // order is what fuses the separate limbs into one carved silhouette
+    // instead of drawing an outline around each piece.
+    //
+    // The rim is 5, not the 6.5 the shield used. It is drawn centred on each
+    // edge, so it eats 2.5 units from both sides of any gap — at 6.5 the space
+    // between the legs and under a bent elbow closed up entirely and the
+    // figure went back to being a blob.
     parts.forEach(function (part) {
       el(part[0], Object.assign({}, part[1], {
-        fill: 'none', stroke: s.rim, 'stroke-width': 6.5,
+        fill: 'none', stroke: s.rim, 'stroke-width': 5,
         'stroke-linejoin': 'round', 'stroke-linecap': 'round'
       }), body);
     });
@@ -601,19 +646,14 @@
       }), body);
     });
 
-    // the shield's spine and band, the eyes, and whatever the army wears
-    [
-      ['path', { d: 'M 0 -12 L 0 27', 'stroke-width': 3 }],
-      ['path', { d: 'M -4.5 -3 L 4.5 -3', 'stroke-width': 2.2 }],
-      ['path', { d: 'M -4.5 6 L 4.5 6', 'stroke-width': 2.2 }],
-      ['path', { d: 'M -4.5 15 L 4.5 15', 'stroke-width': 2.2 }]
-    ].concat(army.accents).forEach(function (part) {
+    // Whatever the army wears. The shield's spine and cross-bands are gone
+    // with the shield, and so are the eyes: the reference figure has no face,
+    // and at the size these are played two dots read as a speck of dirt.
+    army.accents.forEach(function (part) {
       el(part[0], Object.assign({}, part[1], {
         fill: 'none', stroke: s.rim, 'stroke-linecap': 'round'
       }), body);
     });
-    el('circle', { cx: -3.6, cy: -29.5, r: 1.9, fill: s.rim }, body);
-    el('circle', { cx: 3.6, cy: -29.5, r: 1.9, fill: s.rim }, body);
 
     return g;
   }
