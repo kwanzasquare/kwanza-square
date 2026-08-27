@@ -524,6 +524,24 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
 .node-seat { transition: fill .2s ease, opacity .2s ease; }
 
+/* A soldier who is walled in.
+ *
+ * Kenneth lost on Master by immobility and only worked out why afterwards —
+ * the board never told him it was happening. A trapped soldier now sits back:
+ * slightly smaller, dimmer and drained of colour, the way a piece looks when
+ * it is out of the fight.
+ *
+ * Deliberately understated. This is a read the player should be able to take
+ * at a glance without it competing with whose turn it is or where a capture is
+ * owed — the board already has enough things asking for attention. */
+.node.stuck .pawn {
+  filter: saturate(.45) brightness(.72);
+  transform: scale(.9);
+  transform-origin: center;
+  transform-box: fill-box;
+  transition: filter .3s ease, transform .3s ease;
+}
+
 /* A soldier fell here. Faint by design — see the note in render.js. */
 .prisoner-mark { transition: opacity .45s ease; }
 .prisoner-mark-art { animation: prisoner-set .5s ease-out; transform-origin: center; transform-box: fill-box; }

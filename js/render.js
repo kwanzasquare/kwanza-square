@@ -420,6 +420,7 @@
    */
   function update(view, vm) {
     var legal = vm.legal || new Set();
+    var stuck = vm.stuck || new Set();
     var forbidden = vm.forbidden || new Set();
     var capturable = vm.capturable || new Set();
 
@@ -455,6 +456,7 @@
       g.classList.toggle('selected', vm.selected === i || vm.staged === i);
       g.classList.toggle('capturable', capturable.has(i));
       g.classList.toggle('last-move', !!vm.lastMove && vm.lastMove.to === i);
+      g.classList.toggle('stuck', stuck.has(i));
       g.classList.toggle('in-trio-a', inTrio[i] === 'A');
       g.classList.toggle('in-trio-b', inTrio[i] === 'B');
       if (inTrio[i]) {

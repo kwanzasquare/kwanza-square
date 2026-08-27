@@ -119,8 +119,32 @@
       staged: staged ? (staged.type === 'move' ? staged.to : staged.node) : null,
       trios: state.activeTrios,      // standing — drawn quietly
       scored: state.scoredTrios,     // just formed — glows, a capture is due
-      lastMove: state.lastMove[E.other(state.turn)] || null
+      lastMove: state.lastMove[E.other(state.turn)] || null,
+      stuck: new Set()
     };
+
+    /* Soldiers with nowhere to go, marked for both sides.
+     *
+     * Kenneth lost a game on Master and only understood why afterwards: every
+     * one of his soldiers was hemmed in, and losing by immobility is a real
+     * way to lose here. Nothing on the board said so while it was happening.
+     *
+     * "Blocked" means every neighbouring intersection is occupied. That is
+     * deliberately not the same as "has no legal move this turn" — a soldier
+     * whose only exit is the square it just came from is barred for one turn
+     * by the no-backtrack rule, and marking that would flicker on and off and
+     * teach nobody anything. Being walled in is a fact about the position;
+     * the backtrack ban is a fact about the moment.
+     *
+     * Shown for both armies on purpose. Seeing that you are strangling the
+     * other side is as much of a read as seeing that you are being strangled. */
+    if (state.phase === 'movement' && !state.roundOver && !state.matchOver) {
+      for (var s = 0; s < G.NODE_COUNT; s++) {
+        if (state.board[s] === null) continue;
+        var free = G.adjacency[s].some(function (a) { return state.board[a] === null; });
+        if (!free) vm.stuck.add(s);
+      }
+    }
 
     if (state.roundOver || state.matchOver || !isHumanTurn()) return vm;
 

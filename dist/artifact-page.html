@@ -846,6 +846,24 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
 .node-seat { transition: fill .2s ease, opacity .2s ease; }
 
+/* A soldier who is walled in.
+ *
+ * Kenneth lost on Master by immobility and only worked out why afterwards —
+ * the board never told him it was happening. A trapped soldier now sits back:
+ * slightly smaller, dimmer and drained of colour, the way a piece looks when
+ * it is out of the fight.
+ *
+ * Deliberately understated. This is a read the player should be able to take
+ * at a glance without it competing with whose turn it is or where a capture is
+ * owed — the board already has enough things asking for attention. */
+.node.stuck .pawn {
+  filter: saturate(.45) brightness(.72);
+  transform: scale(.9);
+  transform-origin: center;
+  transform-box: fill-box;
+  transition: filter .3s ease, transform .3s ease;
+}
+
 /* A soldier fell here. Faint by design — see the note in render.js. */
 .prisoner-mark { transition: opacity .45s ease; }
 .prisoner-mark-art { animation: prisoner-set .5s ease-out; transform-origin: center; transform-box: fill-box; }
@@ -3011,6 +3029,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
    */
   function update(view, vm) {
     var legal = vm.legal || new Set();
+    var stuck = vm.stuck || new Set();
     var forbidden = vm.forbidden || new Set();
     var capturable = vm.capturable || new Set();
 
@@ -3046,6 +3065,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       g.classList.toggle('selected', vm.selected === i || vm.staged === i);
       g.classList.toggle('capturable', capturable.has(i));
       g.classList.toggle('last-move', !!vm.lastMove && vm.lastMove.to === i);
+      g.classList.toggle('stuck', stuck.has(i));
       g.classList.toggle('in-trio-a', inTrio[i] === 'A');
       g.classList.toggle('in-trio-b', inTrio[i] === 'B');
       if (inTrio[i]) {
@@ -3387,8 +3407,32 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
       staged: staged ? (staged.type === 'move' ? staged.to : staged.node) : null,
       trios: state.activeTrios,      // standing — drawn quietly
       scored: state.scoredTrios,     // just formed — glows, a capture is due
-      lastMove: state.lastMove[E.other(state.turn)] || null
+      lastMove: state.lastMove[E.other(state.turn)] || null,
+      stuck: new Set()
     };
+
+    /* Soldiers with nowhere to go, marked for both sides.
+     *
+     * Kenneth lost a game on Master and only understood why afterwards: every
+     * one of his soldiers was hemmed in, and losing by immobility is a real
+     * way to lose here. Nothing on the board said so while it was happening.
+     *
+     * "Blocked" means every neighbouring intersection is occupied. That is
+     * deliberately not the same as "has no legal move this turn" — a soldier
+     * whose only exit is the square it just came from is barred for one turn
+     * by the no-backtrack rule, and marking that would flicker on and off and
+     * teach nobody anything. Being walled in is a fact about the position;
+     * the backtrack ban is a fact about the moment.
+     *
+     * Shown for both armies on purpose. Seeing that you are strangling the
+     * other side is as much of a read as seeing that you are being strangled. */
+    if (state.phase === 'movement' && !state.roundOver && !state.matchOver) {
+      for (var s = 0; s < G.NODE_COUNT; s++) {
+        if (state.board[s] === null) continue;
+        var free = G.adjacency[s].some(function (a) { return state.board[a] === null; });
+        if (!free) vm.stuck.add(s);
+      }
+    }
 
     if (state.roundOver || state.matchOver || !isHumanTurn()) return vm;
 
