@@ -491,7 +491,7 @@
     if (side && cards[side] && cards[side].decisions >= 4) {
       var g = Gr.summarise(cards[side]);
       grade = '<div class="result-grade">Your play so far: <b>' + g.accuracyText +
-        '</b> accuracy · grade <b>' + g.grade + '</b></div>';
+        '</b> accuracy</div>';
     }
 
     openModal(
@@ -578,7 +578,6 @@
             '<div class="eyebrow">' + label + '</div>' +
             '<div class="grade-accuracy">' + s.accuracyText + '<span> accuracy</span></div>' +
           '</div>' +
-          '<div class="grade-letter">' + s.grade + '</div>' +
         '</div>' +
         '<p class="grade-note">' + s.note + '</p>' +
         '<div class="grade-stats">' +

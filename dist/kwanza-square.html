@@ -780,21 +780,20 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
 .grade-block + .grade-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(247,243,233,.1); }
 .grade-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+/* Martin, after playing a round: "I don't like the letter grading system. I
+   prefer 70% or 32%. With the number system the leaderboard is cleaner.
+   Players can really be separated."
+   He is right, and it is not only taste. A+ through E is six buckets, and six
+   buckets cannot order a leaderboard — the percentage was always the real
+   score and the letter was decoration sitting in the bigger box. The badge is
+   gone; the number takes its weight. The written note stays, because that is
+   the part that tells you what to do differently. */
 .grade-accuracy {
-  font-family: var(--ui-font); font-weight: 800; font-size: 30px;
+  font-family: var(--ui-font); font-weight: 800; font-size: 40px;
   line-height: 1.1; font-variant-numeric: tabular-nums;
-}
-.grade-accuracy span { font-size: 13px; font-weight: 600; color: rgba(247,243,233,.5); margin-left: 6px; }
-.grade-letter {
-  font-family: var(--ui-font); font-weight: 800; font-size: 36px;
-  min-width: 74px; height: 74px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 18px;
   color: var(--gold-lift);
-  background: rgba(212,160,23,.12);
-  border: 1px solid rgba(212,160,23,.45);
-  flex: 0 0 auto;
 }
+.grade-accuracy span { font-size: 14px; font-weight: 600; color: rgba(247,243,233,.5); margin-left: 6px; }
 .grade-note { font-size: 13.5px; line-height: 1.55; color: rgba(247,243,233,.72); margin: 12px 0 0; }
 .grade-stats {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
@@ -812,8 +811,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 
 @media (max-width: 380px) {
   .grade-stats { grid-template-columns: repeat(2, 1fr); }
-  .grade-letter { font-size: 30px; min-width: 62px; height: 62px; }
-  .grade-accuracy { font-size: 26px; }
+  .grade-accuracy { font-size: 34px; }
 }
 
 /* ----------------------------------------------------------------- tutorial */
@@ -3784,7 +3782,7 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
     if (side && cards[side] && cards[side].decisions >= 4) {
       var g = Gr.summarise(cards[side]);
       grade = '<div class="result-grade">Your play so far: <b>' + g.accuracyText +
-        '</b> accuracy · grade <b>' + g.grade + '</b></div>';
+        '</b> accuracy</div>';
     }
 
     openModal(
@@ -3871,7 +3869,6 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
             '<div class="eyebrow">' + label + '</div>' +
             '<div class="grade-accuracy">' + s.accuracyText + '<span> accuracy</span></div>' +
           '</div>' +
-          '<div class="grade-letter">' + s.grade + '</div>' +
         '</div>' +
         '<p class="grade-note">' + s.note + '</p>' +
         '<div class="grade-stats">' +
