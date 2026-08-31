@@ -576,5 +576,62 @@ console.log('\nServer-side verification of a submitted match');
     V.replay({ ...submission, accuracy: 100, points: 999 }).accuracy === v.accuracy);
 }
 
+// --- halftime -------------------------------------------------------------
+//
+// Martin's rule: "You do not save the game to reopen. You only save the
+// result." The property that matters is that pausing between rounds changes
+// NOTHING — a resumed match must replay on the server exactly like an unbroken
+// one, or a paused match could never be submitted. And the slot must contain
+// no position, or a losing round could be reloaded and replayed.
+{
+  function playRound(s) {
+    let guard = 0;
+    while (!s.roundOver && !s.matchOver && guard++ < 3000) {
+      const acts = E.legalActions(s);
+      if (!acts.length) break;
+      E.apply(s, acts[0]);
+    }
+  }
+
+  const live = E.createMatch({ mode: 'ai', aiSide: 'B', difficulty: 'normal', pawns: 9, roundsToWin: 2 });
+  playRound(live);
+  check('a round can end without ending the match', live.roundOver && !live.matchOver);
+
+  // exactly the fields saveHalftime() writes — note the absence of `board`
+  const slot = JSON.parse(JSON.stringify({
+    round: live.round, scores: live.scores, startingPlayer: live.startingPlayer,
+    roundHistory: live.roundHistory, actionLog: live.actionLog,
+    mode: live.mode, aiSide: live.aiSide, difficulty: live.difficulty,
+    names: live.names, pawnsPerSide: live.pawnsPerSide, roundsToWin: live.roundsToWin
+  }));
+
+  E.nextRound(live);                               // carried straight on
+
+  const back = E.createMatch({                     // rebuilt from the slot
+    mode: slot.mode, aiSide: slot.aiSide, difficulty: slot.difficulty,
+    pawns: slot.pawnsPerSide, roundsToWin: slot.roundsToWin
+  });
+  back.names = slot.names;
+  back.scores = { A: slot.scores.A, B: slot.scores.B };
+  back.roundHistory = slot.roundHistory;
+  back.actionLog = slot.actionLog;
+  back.round = slot.round;
+  back.startingPlayer = slot.startingPlayer;
+  E.nextRound(back);
+
+  check('resuming lands on the same round as never having stopped',
+    back.round === live.round, 'resumed=' + back.round + ' live=' + live.round);
+  check('resuming keeps the score',
+    back.scores.A === live.scores.A && back.scores.B === live.scores.B);
+  check('resuming alternates who opens, as an unbroken match does',
+    back.startingPlayer === live.startingPlayer);
+  check('a resumed match replays identically to an unbroken one',
+    JSON.stringify(back.actionLog) === JSON.stringify(live.actionLog));
+  check('the resumed round starts from placement on an empty board',
+    back.phase === 'placement' && back.board.every(c => c === null));
+  check('the saved slot holds no position to reload',
+    !('board' in slot) && !('turn' in slot) && !('toPlace' in slot));
+}
+
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');
 process.exit(failures ? 1 : 0);
