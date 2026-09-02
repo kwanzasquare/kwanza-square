@@ -633,5 +633,80 @@ console.log('\nServer-side verification of a submitted match');
     !('board' in slot) && !('turn' in slot) && !('toPlace' in slot));
 }
 
+
+console.log('\nReferrals (KwanzaStars)');
+{
+  // cloud.js talks to a browser, so it gets one: just enough of localStorage,
+  // location, history and fetch to exercise the attribution rules. These are
+  // the rules that decide who gets credited, so they are worth pinning down
+  // here rather than discovering against a live database.
+  function browser(href) {
+    const store = new Map();
+    const loc = {
+      href: href,
+      get origin() { return new URL(this.href).origin; },
+      get pathname() { return new URL(this.href).pathname; },
+      get search() { return new URL(this.href).search; },
+      get hash() { return new URL(this.href).hash; }
+    };
+    const sent = [];
+    const win = {
+      location: loc,
+      localStorage: {
+        getItem: k => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+        removeItem: k => store.delete(k)
+      },
+      history: { replaceState: (a, b, url) => { loc.href = new URL(url, loc.href).href; } },
+      crypto: { randomUUID: () => 'test-device-0000' },
+      fetch: (url, opts) => {
+        sent.push({ url, body: JSON.parse(opts.body) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
+      },
+      AbortController: function () { this.signal = null; this.abort = function () {}; },
+      setTimeout: setTimeout,
+      clearTimeout: clearTimeout,
+      URL: URL,
+      console: console
+    };
+    win.window = win;
+    vm.createContext(win);
+    vm.runInContext(fs.readFileSync(path.join(root, 'js', 'cloud.js'), 'utf8'), win, { filename: 'cloud.js' });
+    return { KZ: win.KZ, loc, sent, store };
+  }
+
+  const b1 = browser('https://kwanzasquare.com/?ref=Kouame');
+  check('an invite in the URL is captured', b1.KZ.Cloud.referrer() === 'Kouame', b1.KZ.Cloud.referrer());
+  check('the invite is wiped from the address bar',
+    b1.loc.href.indexOf('ref=') === -1, b1.loc.href);
+
+  // The person who actually brought somebody keeps the credit. Without this,
+  // anyone could steal a recruit by getting their link opened once, later.
+  b1.loc.href = 'https://kwanzasquare.com/?ref=Someone_Else';
+  b1.KZ.Cloud.captureReferral();
+  check('a later invite does not overwrite the first',
+    b1.KZ.Cloud.referrer() === 'Kouame', b1.KZ.Cloud.referrer());
+
+  const b2 = browser('https://kwanzasquare.com/');
+  check('no invite means no referrer', b2.KZ.Cloud.referrer() === null);
+  b2.KZ.Cloud.setHandle('Aya');
+  check('a player\'s own link carries their handle',
+    b2.KZ.Cloud.referralLink() === 'https://kwanzasquare.com/?ref=Aya',
+    b2.KZ.Cloud.referralLink());
+
+  // The point of all of the above: the referrer has to reach the server, and
+  // only ever attached to a match the server will replay for itself.
+  const b3 = browser('https://kwanzasquare.com/?ref=Kouame');
+  b3.KZ.Cloud.submit(
+    { difficulty: 'normal', pawnsPerSide: 9, roundsToWin: 2, actionLog: ['p0'] },
+    'A', 'Aya'
+  );
+  check('the invite travels with the submitted match',
+    b3.sent.length === 1 && b3.sent[0].body.ref === 'Kouame',
+    JSON.stringify(b3.sent[0] && b3.sent[0].body.ref));
+  check('the match still carries the whole action log for replay',
+    b3.sent[0].body.actionLog.length === 1 && b3.sent[0].url.indexOf('/functions/v1/submit') !== -1);
+}
+
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');
 process.exit(failures ? 1 : 0);

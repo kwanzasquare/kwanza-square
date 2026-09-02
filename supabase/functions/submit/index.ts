@@ -95,6 +95,13 @@ Deno.serve(async (req) => {
   const handle = String(body?.handle ?? "").normalize("NFC").trim();
   const deviceId = String(body?.deviceId ?? "").trim();
 
+  // Who invited this player, if anyone. Normalised the same way as a handle,
+  // because that is what it is. A referrer that is missing, malformed, unknown
+  // or the player themselves is simply ignored: a bad invite link must never
+  // cost somebody the match they just finished.
+  const ref = String(body?.ref ?? "").normalize("NFC").trim();
+  const refValid = !!ref && HANDLE.test(ref) && ref.toLowerCase() !== handle.toLowerCase();
+
   if (!HANDLE.test(handle)) {
     return json({ error: "A name must be 3–16 letters, numbers or underscores." }, 400);
   }
@@ -149,8 +156,39 @@ Deno.serve(async (req) => {
     playerId = existing.id;
     await db.from("players").update({ seen_at: new Date().toISOString() }).eq("id", playerId);
   } else {
-    const { data: created, error: insertErr } = await db
-      .from("players").insert({ handle, device_id: deviceId }).select("id").single();
+    // A referrer is recorded once, here, and never afterwards — the database
+    // enforces that with a trigger as well. Recording it at any later point
+    // would mean a player could be re-attributed to whoever asked last.
+    let referredBy: string | null = null;
+    if (refValid) {
+      const { data: referrer } = await db
+        .from("players").select("id")
+        .eq("handle_lower", ref.toLowerCase()).maybeSingle();
+      referredBy = referrer?.id ?? null;
+    }
+
+    // Deploy order must not be able to break the game.
+    //
+    // This function and the migration that adds `referred_by` are shipped
+    // separately, by different hands. If the function arrives first, every
+    // insert here would name a column the database has never heard of, and
+    // every newcomer's first match would fail — the worst possible moment to
+    // fail somebody. So the column is treated as optional: if the database does
+    // not have it yet, the player is still recorded, just without a recruiter.
+    // The invite is not lost either, because it lives on their device and rides
+    // along with every match until the day the column exists.
+    let created: { id: string } | null = null;
+    let insertErr: any = null;
+    ({ data: created, error: insertErr } = await db
+      .from("players").insert({ handle, device_id: deviceId, referred_by: referredBy })
+      .select("id").single());
+
+    if (insertErr && insertErr.code === "42703") {
+      console.warn("players.referred_by is not in the database yet; recording without it");
+      ({ data: created, error: insertErr } = await db
+        .from("players").insert({ handle, device_id: deviceId })
+        .select("id").single());
+    }
     if (insertErr) {
       // someone claimed it a moment ago
       if (insertErr.code === "23505") {
@@ -159,7 +197,7 @@ Deno.serve(async (req) => {
       console.error("player insert failed", insertErr);
       return json({ error: "Could not reach the leaderboard. Try again shortly.", stage: "player-insert", detail: insertErr.message }, 503);
     }
-    playerId = created.id;
+    playerId = created!.id;
   }
 
   // ---- rate limit per device --------------------------------------------
@@ -195,6 +233,20 @@ Deno.serve(async (req) => {
   }
   const duplicate = matchErr?.code === "23505";
 
+  // Now that a real, replayed match is on record, see whether this player has
+  // finally earned their recruiter a point. The rule (three matches on three
+  // different days, never on the recruiter's own device) lives in the database,
+  // so it is applied identically no matter who calls. Returns true only on the
+  // one call that actually awards the point, and a failure here must never turn
+  // a saved match into an error.
+  let recruitCredited = false;
+  try {
+    const { data: credited } = await db.rpc("credit_recruit", { p_player: playerId });
+    recruitCredited = credited === true;
+  } catch (e) {
+    console.warn("credit_recruit failed", e);
+  }
+
   // ---- where do they now stand? -----------------------------------------
   const { data: standing } = await db
     .rpc("my_standing", { p_handle: handle, p_level: body.level, p_period: "all" });
@@ -206,5 +258,6 @@ Deno.serve(async (req) => {
     accuracy: verdict.accuracy,
     points: verdict.points,
     standing: standing?.[0] ?? null,
+    recruitCredited,
   });
 });

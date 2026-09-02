@@ -47,6 +47,45 @@
   }
 
   function handle() { return load().handle || null; }
+
+  /**
+   * Who invited this player.
+   *
+   * Read from ?ref= on the very first visit that carries one, then kept. Two
+   * rules, both deliberate:
+   *
+   * The first invite wins. Whoever actually brought somebody to the game keeps
+   * the credit even if the newcomer later opens a different person's link.
+   *
+   * The parameter is wiped from the address bar as soon as it is stored. Left
+   * there, the newcomer's own URL still says ?ref=someone-else, and the moment
+   * they share "the game" with a friend they hand their recruit to the person
+   * who recruited them. That is a quiet, permanent leak of other people's
+   * points, and cleaning the URL costs one line.
+   */
+  function captureReferral() {
+    var s = load();
+    var found = null;
+    try {
+      var url = new URL(window.location.href);
+      found = url.searchParams.get('ref');
+      if (found) {
+        url.searchParams.delete('ref');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+    } catch (e) { return s.ref || null; }
+
+    if (found && !s.ref) { save({ ref: found.trim() }); return found.trim(); }
+    return s.ref || null;
+  }
+  function referrer() { return load().ref || null; }
+
+  /** The link a player shares. Their handle is the invite. */
+  function referralLink(name) {
+    var who = name || handle();
+    if (!who) return null;
+    return location.origin + location.pathname + '?ref=' + encodeURIComponent(who);
+  }
   function setHandle(h) { save({ handle: h }); }
   function forget() {
     try { localStorage.removeItem(STORE); } catch (e) {}
@@ -140,6 +179,22 @@
     return handlePatternPromise;
   }
 
+  /** The recruitment board — Martin\'s KwanzaStars, the social ranking. */
+  function stars(period, limit) {
+    return rpc('stars_leaderboard', { p_period: period || 'all', p_limit: limit || 100 });
+  }
+
+  function myStars(name, period) {
+    return rpc('my_stars', { p_handle: name, p_period: period || 'all' })
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  /** Where a player stands against the three invitational conditions. */
+  function kitStatus(name, level) {
+    return rpc('kit_status', { p_handle: name, p_level: level || 'normal' })
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
   function standing(name, level, period) {
     return rpc('my_standing', { p_handle: name, p_level: level, p_period: period || 'all' })
       .then(function (rows) { return (rows && rows[0]) || null; });
@@ -159,7 +214,8 @@
         pawns: state.pawnsPerSide,
         roundsToWin: state.roundsToWin,
         humanSide: humanSide,
-        actionLog: state.actionLog
+        actionLog: state.actionLog,
+        ref: referrer()
       })
     });
   }
@@ -175,6 +231,15 @@
     periods: periods,
     handlePattern: handlePattern,
     standing: standing,
-    submit: submit
+    submit: submit,
+    captureReferral: captureReferral,
+    referrer: referrer,
+    referralLink: referralLink,
+    stars: stars,
+    myStars: myStars,
+    kitStatus: kitStatus
   };
+
+  // Catch the invite before anything else has a chance to rewrite the URL.
+  try { captureReferral(); } catch (e) {}
 })(window.KZ = window.KZ || {});
