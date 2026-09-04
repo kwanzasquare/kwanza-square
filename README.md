@@ -186,10 +186,81 @@ nothing else needs to change.
 
 ---
 
+## Online leaderboard and KwanzaStars
+
+Kwanza Square now has a live Supabase-backed competition layer.
+
+### Verified skill leaderboard
+
+Finished matches can be submitted to the online leaderboard.
+
+The client does not decide its own result or score. The `submit` Edge Function
+receives the full action log and replays the game server-side using the same
+Kwanza engine before storing the result.
+
+Invalid or impossible games are rejected.
+
+### KwanzaStars recruitment leaderboard
+
+Players can invite new players with a referral link:
+
+`https://kwanzasquare.com/?ref=theirhandle`
+
+The recruiter is recorded when the new player first appears and cannot be
+changed afterwards.
+
+A recruit counts only after the new player has played three matches on three
+different days.
+
+A recruit playing on the same device as the recruiter does not count.
+
+Each qualified recruit is credited once only.
+
+The KwanzaStars levels are:
+
+- Bronze — 5 qualified recruits
+- Silver — 10
+- Gold — 25
+- Platinum — 50
+- Diamond — 100
+
+The social leaderboard ranks players by qualified recruits. Players with no
+qualified recruits yet can still see how many recruits they need to reach their
+next star.
+
+### Invitational status
+
+The backend exposes the Invitational requirements separately so the game can
+show a player exactly what they are still missing:
+
+- days played
+- matches played
+- skill leaderboard rank
+- recruitment leaderboard rank
+
+### Deployment
+
+The KwanzaStars database migration is:
+
+`supabase/migrations/20260902180000_kwanzastars.sql`
+
+The production `submit` Edge Function is located at:
+
+`supabase/functions/submit/`
+
+The KwanzaStars migration and the updated `submit` function are currently
+deployed on the production Supabase project.
+
+---
+
 ## What is not built
 
-These are from the wider package and were out of scope for the app itself:
-the marketing site, the store, leaderboards, online multiplayer, monetization
-(ads, skins, subscriptions), and app-store packaging. The game logic and
-interface are complete and self-contained, and would drop into a Capacitor or
-Cordova shell as-is.
+These wider product features are still outside the current implementation:
+
+- online human-vs-human multiplayer
+- monetization such as ads, skins or subscriptions
+- store / wider commercial site
+- native app-store packaging
+
+The core game, AI, verified online leaderboard and KwanzaStars recruitment
+system are built.
