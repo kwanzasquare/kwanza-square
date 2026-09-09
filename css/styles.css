@@ -1038,3 +1038,71 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   .home-wrap { justify-content: flex-start; }
   .brand-mark { width: min(30vw, 104px); }
 }
+
+/* -------------------------------------------------------------- KwanzaStars */
+
+.stars-link {
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(247,243,233,.12);
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  /* A link is long and has no spaces, so it must be allowed to break or it
+     pushes the whole panel sideways on a phone. */
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.stars-link code {
+  font-size: 12.5px;
+  color: var(--gold-lift);
+  line-height: 1.5;
+}
+
+.stars-count {
+  font-family: var(--ui-font);
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--gold-lift);
+  margin: 2px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kit-list { list-style: none; margin: 0; padding: 0; }
+.kit-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid rgba(247,243,233,.07);
+  font-size: 14px;
+}
+.kit-row:last-child { border-bottom: none; }
+.kit-label { color: rgba(247,243,233,.72); }
+.kit-num {
+  font-family: var(--ui-font); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(247,243,233,.5);
+}
+/* A condition already met reads as met at a glance, without a tick to decode. */
+.kit-row.ok .kit-label { color: rgba(247,243,233,.95); }
+.kit-row.ok .kit-num { color: var(--gold-lift); }
+
+
+/* ---------------------------------------------------------- reduced motion
+ *
+ * Nineteen keyframe animations ship in this file and several of them never
+ * stop: the legal-move halo, the selected soldier's bob, the capture ring, the
+ * trio breathe, the centre aura and its spin. Someone who has asked their phone
+ * for less movement was getting all of it anyway.
+ *
+ * Everything is cut to an instant rather than removed. Animations that carry
+ * meaning finish in their end state instead of vanishing — a scored trio still
+ * appears, a placed soldier still lands — so nothing that the game says through
+ * movement is lost, it simply arrives without the movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

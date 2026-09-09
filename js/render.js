@@ -220,7 +220,19 @@
       fill: 'none', stroke: 'rgba(255,255,255,.06)', 'stroke-width': 1.4
     }, pat);
 
-    var glow = el('filter', { id: p + '-glow', x: '-60%', y: '-60%', width: '220%', height: '220%' }, d);
+    // The region is in user space, not in units of the shape's bounding box.
+    //
+    // This matters for one shape in particular. A scored trio is drawn as a
+    // straight <line>, and a horizontal or vertical line has a bounding box
+    // with no height or no width at all. With the default objectBoundingBox
+    // units, a percentage of zero is zero, the filter region collapses, and the
+    // browser draws nothing — so trios lying straight across the board silently
+    // lost their glow while diagonal ones kept theirs. Fixing the units rather
+    // than the line keeps every shape that shares this filter working.
+    var glow = el('filter', {
+      id: p + '-glow', filterUnits: 'userSpaceOnUse',
+      x: -100, y: -100, width: 1200, height: 1200
+    }, d);
     el('feGaussianBlur', { stdDeviation: 7, result: 'b' }, glow);
     var merge = el('feMerge', null, glow);
     el('feMergeNode', { in: 'b' }, merge);

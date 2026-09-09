@@ -289,6 +289,14 @@
         <h2>Leaderboard</h2>
         <p class="hint">Every match here was replayed and re-proved on the server. Nothing is taken on trust.</p>
 
+        <!-- Martin's two boards: one for playing well, one for bringing people
+             in. They are the same size on screen because they are meant to
+             matter equally. -->
+        <div class="seg" style="margin-bottom:8px">
+          <button class="btn btn-sm" data-board="skill" aria-pressed="true">Skill</button>
+          <button class="btn btn-sm" data-board="stars">KwanzaStars</button>
+        </div>
+
         <div class="seg" style="margin-bottom:8px">
           <button class="btn btn-sm" data-lb-level="easy">Beginner</button>
           <button class="btn btn-sm" data-lb-level="normal">Skilled</button>
@@ -311,6 +319,40 @@
 
       <div class="menu">
         <button class="btn btn-ghost" id="btn-lb-back">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- KwanzaStars -->
+  <section class="screen" id="screen-stars">
+    <div class="scroll-body">
+      <div class="panel">
+        <div class="eyebrow">Kwanza Square</div>
+        <h2>KwanzaStars</h2>
+        <p class="hint">The second board. This one ranks who brings players in, not who plays best.</p>
+
+        <div class="seg">
+          <button class="btn btn-sm" data-board="skill">Skill</button>
+          <button class="btn btn-sm" data-board="stars" aria-pressed="true">KwanzaStars</button>
+        </div>
+      </div>
+
+      <!-- Nothing on this board can happen until a player can see their own
+           link, so it goes first, above the standings. -->
+      <div class="panel" id="stars-invite"></div>
+
+      <div class="panel" id="stars-me" hidden></div>
+
+      <div class="panel">
+        <div class="lb-state" id="stars-state">Loading…</div>
+        <ol class="lb-rows" id="stars-rows"></ol>
+        <div class="lb-you" id="stars-you" hidden></div>
+      </div>
+
+      <div class="panel" id="stars-kit" hidden></div>
+
+      <div class="menu">
+        <button class="btn btn-ghost" id="btn-stars-back">Back</button>
       </div>
     </div>
   </section>

@@ -1077,6 +1077,185 @@
     });
   }
 
+  // ------------------------------------------------------------ KwanzaStars
+  //
+  // The recruitment board. The database has counted all of this since the
+  // migration went in; until now the game simply never showed it, which meant
+  // no player could see the link they were meant to share and so no recruit
+  // could ever be earned. This screen is the missing half.
+
+  var STAR_NAMES = {
+    bronze: 'Bronze', silver: 'Silver', gold: 'Gold',
+    platinum: 'Platinum', diamond: 'Diamond'
+  };
+
+  function starLabel(level) {
+    return level ? STAR_NAMES[level] + ' Star' : 'No star yet';
+  }
+
+  /** "3 recruits" / "1 recruit" — a board about people should count them properly. */
+  function recruits(n) {
+    return n + (Number(n) === 1 ? ' recruit' : ' recruits');
+  }
+
+  function renderInvite() {
+    var box = $('#stars-invite');
+    var mine = C.handle();
+
+    // Without a claimed name there is no link to give, so say what to do about
+    // it rather than showing an empty box.
+    if (!mine) {
+      box.innerHTML = '<h2>Your invite link</h2>' +
+        '<p class="hint">Your link is built from your name, so claim one first. ' +
+        'It is the same name you appear under on the skill board.</p>' +
+        '<button class="btn btn-primary" id="btn-stars-claim">Choose your name</button>';
+      return;
+    }
+
+    var link = C.referralLink(mine);
+    box.innerHTML = '<h2>Your invite link</h2>' +
+      '<p class="hint">Anyone who opens this and then plays three matches on ' +
+      'three different days counts as one recruit.</p>' +
+      '<div class="stars-link"><code id="stars-link-text">' + escapeHtml(link) + '</code></div>' +
+      '<button class="btn btn-sm" id="btn-stars-copy">Copy link</button>';
+  }
+
+  function copyInvite() {
+    var btn = $('#btn-stars-copy');
+    var link = C.referralLink(C.handle());
+    if (!btn || !link) return;
+
+    var said = function (word) {
+      btn.textContent = word;
+      setTimeout(function () { if (btn) btn.textContent = 'Copy link'; }, 1800);
+    };
+
+    // Clipboard access is refused in plenty of ordinary situations — an
+    // insecure origin, a browser that never had the API. Falling back to
+    // selecting the text means the player can always still copy it by hand.
+    var selectIt = function () {
+      var node = $('#stars-link-text');
+      if (!node) return;
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(node);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        said('Select and copy');
+      } catch (e) { said('Copy it by hand'); }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function () { said('Copied'); }, selectIt);
+    } else {
+      selectIt();
+    }
+  }
+
+  function renderMyStars(row) {
+    var box = $('#stars-me');
+    if (!row) { box.hidden = true; return; }
+    box.hidden = false;
+
+    var count = Number(row.recruits) || 0;
+    var next = row.next_level
+      ? '<p class="hint">' + row.to_next + ' more to ' + STAR_NAMES[row.next_level] + '.</p>'
+      : '<p class="hint">Every star earned. Nothing above Diamond.</p>';
+
+    box.innerHTML = '<h2>' + starLabel(row.level) + '</h2>' +
+      '<p class="stars-count">' + recruits(count) + '</p>' + next;
+  }
+
+  /** The three invitational conditions, as numbers rather than a yes or no. */
+  function renderKit(row) {
+    var box = $('#stars-kit');
+    if (!row) { box.hidden = true; return; }
+    box.hidden = false;
+
+    var line = function (label, have, need, ok) {
+      return '<li class="kit-row' + (ok ? ' ok' : '') + '">' +
+        '<span class="kit-label">' + label + '</span>' +
+        '<span class="kit-num">' + have + ' / ' + need + '</span></li>';
+    };
+
+    var rank = function (label, r, ok) {
+      return '<li class="kit-row' + (ok ? ' ok' : '') + '">' +
+        '<span class="kit-label">' + label + '</span>' +
+        '<span class="kit-num">' + (Number(r) > 0 ? '#' + r : '—') + '</span></li>';
+    };
+
+    box.innerHTML = '<h2>Invitational</h2>' +
+      '<p class="hint">Three conditions, and you can see which one you are short on.</p>' +
+      '<ul class="kit-list">' +
+        line('Days played this month', row.days_played, row.days_required, row.active) +
+        line('Matches played', row.matches_played, row.matches_required, Number(row.matches_played) >= Number(row.matches_required)) +
+        rank('Skill rank (top 50)', row.skill_rank, row.skill_ok) +
+        rank('KwanzaStars rank (top 50)', row.social_rank, row.social_ok) +
+      '</ul>';
+  }
+
+  function loadStars() {
+    renderInvite();
+
+    var rows = $('#stars-rows'), state = $('#stars-state'), you = $('#stars-you');
+    rows.innerHTML = '';
+    you.hidden = true;
+    state.hidden = false;
+    state.textContent = 'Loading…';
+
+    var mine = C.handle();
+
+    C.stars('all', 100).then(function (list) {
+      if (!list || !list.length) {
+        state.textContent = 'Nobody has earned a recruit yet. The first link shared could put a name here.';
+      } else {
+        state.hidden = true;
+        rows.innerHTML = list.map(function (r) {
+          var isMe = mine && r.handle.toLowerCase() === mine.toLowerCase();
+          return '<li class="lb-row' + (isMe ? ' me' : '') + '">' +
+            '<span class="lb-rank">' + r.rank + '</span>' +
+            '<span class="lb-handle">' + escapeHtml(r.handle) + '</span>' +
+            '<span class="lb-rating">' + r.recruits + '</span>' +
+            '<span class="lb-played">' + (r.level ? STAR_NAMES[r.level] : '') + '</span>' +
+          '</li>';
+        }).join('');
+      }
+
+      // A player with no recruits yet is exactly the one who needs to see how
+      // the board works, so their own line is shown whether they rank or not.
+      if (mine && (!list || !list.some(function (r) { return r.handle.toLowerCase() === mine.toLowerCase(); }))) {
+        C.myStars(mine, 'all').then(function (row) {
+          if (!row) return;
+          you.hidden = false;
+          you.innerHTML = '<span class="lb-rank">' + (Number(row.rank) > 0 ? row.rank : '—') + '</span>' +
+            '<span class="lb-handle">' + escapeHtml(row.handle) + '</span>' +
+            '<span class="lb-rating">' + row.recruits + '</span>' +
+            '<span class="lb-played">' + (row.level ? STAR_NAMES[row.level] : '') + '</span>';
+        }, function () {});
+      }
+    }, function (err) {
+      console.warn('stars board unavailable:', err);
+      state.hidden = false;
+      state.textContent = err.status === 404 || /schema cache|does not exist/i.test(err.message || '')
+        ? 'KwanzaStars is not open yet. It arrives shortly.'
+        : 'Could not load KwanzaStars just now. Please try again in a moment.';
+    });
+
+    if (mine) {
+      C.myStars(mine, 'all').then(renderMyStars, function () { $('#stars-me').hidden = true; });
+      C.kitStatus(mine, homeLevel()).then(renderKit, function () { $('#stars-kit').hidden = true; });
+    } else {
+      $('#stars-me').hidden = true;
+      $('#stars-kit').hidden = true;
+    }
+  }
+
+  function openStars() {
+    showScreen('screen-stars');
+    loadStars();
+  }
+
   // ------------------------------------------------------ the board at home
   //
   // Stephan's idea, and the right one: seeing five real names is a far better
@@ -1475,6 +1654,21 @@
     loadHomeBoard();
     renderResume();
     $('#btn-lb-back').addEventListener('click', function () { showScreen('screen-home'); });
+
+    // The two boards, and the way between them.
+    $all('[data-board]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.board === 'stars') openStars();
+        else { showScreen('screen-leaderboard'); loadLeaderboard(); }
+      });
+    });
+    $('#btn-stars-back').addEventListener('click', function () { showScreen('screen-home'); });
+    $('#stars-invite').addEventListener('click', function (ev) {
+      if (ev.target.closest('#btn-stars-copy')) copyInvite();
+      if (ev.target.closest('#btn-stars-claim')) {
+        askForHandle().then(function (name) { if (name) loadStars(); }, function () {});
+      }
+    });
     $all('[data-lb-level]').forEach(function (b) {
       b.addEventListener('click', function () { lb.level = b.dataset.lbLevel; loadLeaderboard(); });
     });
