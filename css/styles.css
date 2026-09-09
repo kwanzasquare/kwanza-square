@@ -1086,6 +1086,55 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .kit-row.ok .kit-num { color: var(--gold-lift); }
 
 
+/* ------------------------------------------------------- play-style profile */
+
+.profile-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(247,243,233,.09); }
+
+.profile-name {
+  font-family: var(--ui-font); font-weight: 800; font-size: 20px;
+  color: var(--gold-lift); margin: 2px 0 2px;
+}
+
+.trait-list { list-style: none; margin: 12px 0 0; padding: 0; }
+
+/* name and number hold their columns so the bars line up and can be compared
+   down the page rather than each being read on its own. */
+.trait {
+  display: grid;
+  grid-template-columns: 6.4rem 1fr 2.6rem;
+  align-items: center; gap: 9px;
+  margin-bottom: 9px;
+  font-size: 13px;
+}
+.trait-name { font-weight: 700; }
+.trait-bar {
+  height: 7px; border-radius: 99px;
+  background: rgba(247,243,233,.1);
+  overflow: hidden;
+}
+.trait-bar i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, rgba(212,160,23,.55), var(--gold-lift));
+  border-radius: 99px;
+}
+.trait-num {
+  text-align: right; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--gold-lift);
+}
+/* the plain-English reason, under the bar and out of the way of the number */
+.trait-why {
+  grid-column: 2 / 4;
+  font-size: 11.5px; color: rgba(247,243,233,.45);
+  margin-top: -4px;
+}
+
+.profile-basis {
+  font-size: 11.5px; line-height: 1.55;
+  color: rgba(247,243,233,.4);
+  margin-top: 12px;
+}
+
+
 /* ---------------------------------------------------------- reduced motion
  *
  * Nineteen keyframe animations ship in this file and several of them never

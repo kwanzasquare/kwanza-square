@@ -708,5 +708,98 @@ console.log('\nReferrals (KwanzaStars)');
     b3.sent[0].body.actionLog.length === 1 && b3.sent[0].url.indexOf('/functions/v1/submit') !== -1);
 }
 
+
+console.log('\nPlay-style profile');
+{
+  // grade.js keeps the record in localStorage; the sandbox has none, so give it
+  // one. This also lets each case start from a known record.
+  let store = {};
+  sandbox.localStorage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: k => { delete store[k]; }
+  };
+  const reset = () => { store = {}; };
+
+  // Play `n` matches with a fixed shape, so the arithmetic is checkable by hand.
+  function playMatches(n, shape) {
+    for (let i = 0; i < n; i++) Gr.commitMatch(Object.assign({ won: true, drawn: false }, shape));
+    return Gr.loadRecord();
+  }
+
+  reset();
+  const thin = Gr.profile(playMatches(2, { accuracy: 80, decisions: 10, best: 5, blunders: 1, captures: 2, lostSoldiers: 1 }));
+  check('two matches is not enough for a profile', thin.ready === false, JSON.stringify(thin));
+  check('it says how many more are needed', thin.matchesNeeded === Gr.PROFILE_MIN_MATCHES - 2, thin.matchesNeeded);
+
+  // 6 matches x 10 decisions = 60 decisions, past both thresholds.
+  reset();
+  const strong = Gr.profile(playMatches(6, {
+    accuracy: 90, decisions: 10, best: 9, blunders: 0, captures: 4, lostSoldiers: 1
+  }));
+  check('enough play produces a profile', strong.ready === true);
+  check('precision is the measured best-move rate',
+    Math.round(strong.traits.precision) === 90, strong.traits.precision);
+  check('no blunders reads as full composure',
+    Math.round(strong.traits.composure) === 100, strong.traits.composure);
+  check('dominance is the share of exchanges won',
+    Math.round(strong.traits.dominance) === 80, strong.traits.dominance);
+  check('identical matches read as fully consistent',
+    Math.round(strong.traits.consistency) === 100, strong.traits.consistency);
+
+  // Blunders must lower composure, and nothing else should silently move with it.
+  reset();
+  const sloppy = Gr.profile(playMatches(6, {
+    accuracy: 90, decisions: 10, best: 9, blunders: 5, captures: 4, lostSoldiers: 1
+  }));
+  check('blunders cut composure', Math.round(sloppy.traits.composure) === 50, sloppy.traits.composure);
+  check('blunders do not disturb precision',
+    Math.round(sloppy.traits.precision) === Math.round(strong.traits.precision));
+
+  // Swinging accuracy is the whole point of the consistency reading.
+  reset();
+  [95, 55, 92, 58, 90, 60].forEach(a => Gr.commitMatch({
+    won: true, drawn: false, accuracy: a, decisions: 10, best: 5, blunders: 1, captures: 1, lostSoldiers: 1
+  }));
+  const swingy = Gr.profile();
+  check('a swinging player is not called consistent',
+    swingy.traits.consistency < 40, swingy.traits.consistency);
+
+  // Never divide by an exchange that never happened.
+  reset();
+  const peaceful = Gr.profile(playMatches(6, {
+    accuracy: 70, decisions: 10, best: 5, blunders: 1, captures: 0, lostSoldiers: 0
+  }));
+  check('no exchanges at all does not produce NaN',
+    peaceful.traits.dominance === 50, peaceful.traits.dominance);
+  check('every trait is a real number in range',
+    Object.values(peaceful.traits).every(v => typeof v === 'number' && isFinite(v) && v >= 0 && v <= 100),
+    JSON.stringify(peaceful.traits));
+
+  // The archetype must follow the strongest trait, not a fixed favourite.
+  reset();
+  const commander = Gr.profile(playMatches(6, {
+    accuracy: 60, decisions: 10, best: 1, blunders: 6, captures: 20, lostSoldiers: 0
+  }));
+  check('the archetype follows the strongest trait',
+    commander.archetype === 'The Field Commander', commander.archetype + ' ' + JSON.stringify(commander.traits));
+
+  // A record written before the profile existed must survive, not reset.
+  reset();
+  store['kwanza-record'] = JSON.stringify({ played: 12, won: 7, lost: 5, drawn: 0, graded: 9, sumAccuracy: 720, bestAccuracy: 91, streak: 2, bestStreak: 4 });
+  const old = Gr.loadRecord();
+  check('an old record keeps its history', old.played === 12 && old.won === 7 && old.bestAccuracy === 91);
+  check('an old record gains the new fields at zero', old.decisions === 0 && Array.isArray(old.recent));
+  check('an old record cannot fake a profile it has no data for',
+    Gr.profile(old).ready === false, JSON.stringify(Gr.profile(old)));
+
+  // The record is written to a phone; it must not grow without limit.
+  reset();
+  for (let i = 0; i < 200; i++) Gr.commitMatch({ won: true, drawn: false, accuracy: 70 + (i % 20), decisions: 10, best: 5, blunders: 1, captures: 1, lostSoldiers: 1 });
+  const big = Gr.loadRecord();
+  check('the kept history is capped', big.recent.length === 50, big.recent.length);
+  check('the whole record stays small', store['kwanza-record'].length < 1200, store['kwanza-record'].length + ' bytes');
+}
+
 console.log('\n' + (failures ? failures + ' CHECK(S) FAILED' : 'All checks passed.') + '\n');
 process.exit(failures ? 1 : 0);

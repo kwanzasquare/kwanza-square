@@ -626,7 +626,12 @@
       clearHalftime();
       if (cards && cards[me || 'A']) {
         var card = Gr.summarise(cards[me || 'A']);
-        Gr.commitMatch({ won: winner === (me || 'A'), drawn: !winner, accuracy: card.accuracy });
+        Gr.commitMatch({
+          won: winner === (me || 'A'), drawn: !winner, accuracy: card.accuracy,
+          // already worked out to grade this match — passed on rather than recomputed
+          decisions: card.decisions, best: Math.round(card.bestRate * card.decisions / 100),
+          blunders: card.blunders, captures: card.captures, lostSoldiers: card.lost
+        });
       }
       if (playerWon && winner) { sfx.win(); KZ.Celebrate.win(true); }
       else if (winner) { sfx.defeat(); KZ.Celebrate.defeat(); }
@@ -778,6 +783,53 @@
       '</div>';
   }
 
+  /**
+   * How this player plays, drawn from every match they have finished.
+   *
+   * Shown after a match rather than on the home screen: it is a reading of how
+   * somebody plays, and the moment just after playing is when that means
+   * something. Until there is enough to say, it says how much is missing
+   * instead of guessing.
+   */
+  function profileHtml() {
+    var p = Gr.profile();
+    if (!p.ready) {
+      if (!p.graded) return '';
+      return '<div class="profile-block">' +
+        '<div class="eyebrow">Your play</div>' +
+        '<p class="grade-note">Still reading your game — ' + p.matchesNeeded +
+        ' more ranked match' + (p.matchesNeeded === 1 ? '' : 'es') +
+        ' and this becomes a profile.</p></div>';
+    }
+
+    var order = [
+      ['precision',   'Precision',   'chose the strongest move'],
+      ['composure',   'Composure',   'held up when it mattered'],
+      ['dominance',   'Dominance',   'exchanges that went your way'],
+      ['consistency', 'Consistency', 'match to match']
+    ];
+
+    var bars = order.map(function (row) {
+      var v = Math.round(p.traits[row[0]]);
+      return '<li class="trait">' +
+        '<span class="trait-name">' + row[1] + '</span>' +
+        '<span class="trait-bar"><i style="width:' + v + '%"></i></span>' +
+        '<span class="trait-num">' + v + '%</span>' +
+        '<span class="trait-why">' + row[2] + '</span>' +
+      '</li>';
+    }).join('');
+
+    return '<div class="profile-block">' +
+      '<div class="eyebrow">Your play</div>' +
+      '<div class="profile-name">' + escapeHtml(p.archetype) + '</div>' +
+      '<p class="grade-note">' + escapeHtml(p.note) + '</p>' +
+      '<ul class="trait-list">' + bars + '</ul>' +
+      '<p class="profile-basis">Read from ' + p.graded + ' graded match' +
+        (p.graded === 1 ? '' : 'es') + '. Nothing here is guessed — every number ' +
+        'is something the game already worked out to score your play.</p>' +
+    '</div>';
+  }
+
   function renderScoreboard(mood) {
     var panel = $('#screen-scoreboard').querySelector('.panel');
     panel.classList.remove('won', 'lost');
@@ -813,7 +865,8 @@
     $('#grade-panel').hidden = !grades;
 
     var rec = recordHtml();
-    $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec : '';
+    var prof = profileHtml();
+    $('#record-panel').innerHTML = rec ? '<h2>Your record</h2>' + rec + prof : '';
     $('#record-panel').hidden = !rec;
 
     // Only a ranked match against the AI can go on the board: two people on one
