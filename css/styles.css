@@ -832,8 +832,10 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
   padding: 9px 4px;
   border-bottom: 1px solid rgba(247,243,233,.07);
   font-size: 14px;
+  cursor: pointer;
 }
 .lb-row:last-child { border-bottom: none; }
+.lb-row:hover, .lb-you:hover { background: rgba(247,243,233,.05); border-radius: 9px; }
 
 .lb-rank {
   font-family: var(--ui-font); font-weight: 800; font-size: 13px;

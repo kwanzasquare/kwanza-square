@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
     [playerId, body.level, body.pawns, body.roundsToWin, (body.actionLog as string[]).join(",")].join("|"),
   );
 
-  const { error: matchErr } = await db.from("matches").insert({
+  const matchRow = {
     player_id: playerId,
     level: body.level,
     pawns: Number(body.pawns),
@@ -225,7 +225,24 @@ Deno.serve(async (req) => {
     points: verdict.points,
     moves: body.actionLog,
     fingerprint,
+  };
+
+  // The play-style counters, and the same deploy-order concession as
+  // `referred_by` above: this function and the migration that adds these
+  // columns ship separately, so a match must still save without them if the
+  // function arrives first.
+  let { error: matchErr } = await db.from("matches").insert({
+    ...matchRow,
+    best: verdict.best,
+    blunders: verdict.blunders,
+    captures: verdict.captures,
+    lost_soldiers: verdict.lostSoldiers,
   });
+
+  if (matchErr && matchErr.code === "42703") {
+    console.warn("matches profile columns are not in the database yet; storing without them");
+    ({ error: matchErr } = await db.from("matches").insert(matchRow));
+  }
 
   if (matchErr && matchErr.code !== "23505") {
     console.error("match insert failed", matchErr);

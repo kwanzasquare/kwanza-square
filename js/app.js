@@ -791,13 +791,29 @@
    * something. Until there is enough to say, it says how much is missing
    * instead of guessing.
    */
-  function profileHtml() {
-    var p = Gr.profile();
+  /**
+   * `rec` and `opts` are both optional: called with neither, this renders the
+   * current device's own profile exactly as before. `opts.name` renders
+   * somebody else's, read from the server rather than localStorage — same
+   * function, same trait math, because a trait means the same thing either way.
+   */
+  function profileHtml(rec, opts) {
+    opts = opts || {};
+    var who = opts.name || null;
+    var eyebrow = who ? escapeHtml(who) + '’s play' : 'Your play';
+    var pronoun = who ? 'their' : 'your';
+
+    var p = Gr.profile(rec);
     if (!p.ready) {
-      if (!p.graded) return '';
+      if (!p.graded) {
+        if (!opts.emptyText) return '';
+        return '<div class="profile-block">' +
+          '<div class="eyebrow">' + eyebrow + '</div>' +
+          '<p class="grade-note">' + escapeHtml(opts.emptyText) + '</p></div>';
+      }
       return '<div class="profile-block">' +
-        '<div class="eyebrow">Your play</div>' +
-        '<p class="grade-note">Still reading your game — ' + p.matchesNeeded +
+        '<div class="eyebrow">' + eyebrow + '</div>' +
+        '<p class="grade-note">Still reading ' + pronoun + ' game — ' + p.matchesNeeded +
         ' more ranked match' + (p.matchesNeeded === 1 ? '' : 'es') +
         ' and this becomes a profile.</p></div>';
     }
@@ -805,7 +821,7 @@
     var order = [
       ['precision',   'Precision',   'chose the strongest move'],
       ['composure',   'Composure',   'held up when it mattered'],
-      ['dominance',   'Dominance',   'exchanges that went your way'],
+      ['dominance',   'Dominance',   'exchanges that went ' + pronoun + ' way'],
       ['consistency', 'Consistency', 'match to match']
     ];
 
@@ -820,14 +836,62 @@
     }).join('');
 
     return '<div class="profile-block">' +
-      '<div class="eyebrow">Your play</div>' +
+      '<div class="eyebrow">' + eyebrow + '</div>' +
       '<div class="profile-name">' + escapeHtml(p.archetype) + '</div>' +
-      '<p class="grade-note">' + escapeHtml(p.note) + '</p>' +
+      '<p class="grade-note">' + escapeHtml(who ? p.noteThird : p.note) + '</p>' +
       '<ul class="trait-list">' + bars + '</ul>' +
       '<p class="profile-basis">Read from ' + p.graded + ' graded match' +
         (p.graded === 1 ? '' : 'es') + '. Nothing here is guessed — every number ' +
-        'is something the game already worked out to score your play.</p>' +
+        'is something the game already worked out to score ' + pronoun + ' play.</p>' +
     '</div>';
+  }
+
+  /** A server profile row, reshaped into the record KZ.Grade.profile() expects. */
+  function opponentRecord(row) {
+    return {
+      graded: Number(row && row.graded) || 0,
+      decisions: Number(row && row.decisions) || 0,
+      best: Number(row && row.best) || 0,
+      blunders: Number(row && row.blunders) || 0,
+      captures: Number(row && row.captures) || 0,
+      lost_soldiers: Number(row && row.lost_soldiers) || 0,
+      recent: (row && Array.isArray(row.recent)) ? row.recent.map(Number) : []
+    };
+  }
+
+  /** Tap a name on a board to see how that player plays — read from the server, never localStorage. */
+  function showOpponentProfile(handle) {
+    if (!handle) return;
+    openModal(
+      '<h2>' + escapeHtml(handle) + '</h2><div class="modal-body" id="opponent-profile-body">' +
+        '<p class="hint">Loading their play style…</p></div>',
+      [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]
+    );
+    C.playerProfile(handle).then(function (row) {
+      var body = $('#opponent-profile-body');
+      if (!body) return;
+      body.innerHTML = profileHtml(opponentRecord(row), {
+        name: handle,
+        emptyText: 'No ranked matches on record yet.'
+      }) || '<p class="hint">No ranked matches on record yet.</p>';
+    }, function (err) {
+      var body = $('#opponent-profile-body');
+      if (!body) return;
+      console.warn('opponent profile unavailable:', err);
+      body.innerHTML = '<p class="hint">' + (
+        err.status === 404 || /schema cache|does not exist/i.test(err.message || '')
+          ? 'Play-style profiles are not open yet. They arrive shortly.'
+          : 'Could not load their play style just now. Please try again in a moment.'
+      ) + '</p>';
+    });
+  }
+
+  /** Read the handle out of a clicked leaderboard row, whichever board it came from. */
+  function handleFromRow(ev) {
+    var row = ev.target.closest('.lb-row, .lb-you');
+    if (!row) return;
+    var span = row.querySelector('.lb-handle');
+    if (span) showOpponentProfile(span.textContent);
   }
 
   function renderScoreboard(mood) {
@@ -1811,6 +1875,11 @@
 
     $('#modal-backdrop').addEventListener('click', function (ev) {
       if (ev.target === ev.currentTarget) closeModal();
+    });
+
+    // Any name on a leaderboard opens that player's play-style profile.
+    [$('#lb-rows'), $('#lb-you'), $('#stars-rows'), $('#stars-you')].forEach(function (el) {
+      if (el) el.addEventListener('click', handleFromRow);
     });
 
     syncModeUI();

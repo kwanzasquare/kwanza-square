@@ -201,6 +201,17 @@
   }
 
   /**
+   * Somebody else's play-style raw material — the same counters KZ.Grade
+   * already keeps for the current device, but summed across every match that
+   * player has had verified on the server. Shaped so it can be handed straight
+   * to KZ.Grade.profile() without a second copy of what a trait means.
+   */
+  function playerProfile(name) {
+    return rpc('player_profile', { p_handle: name })
+      .then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  /**
    * Send a finished match. `state` is the engine's own state — the full action
    * log travels with it, and the server decides what actually happened.
    */
@@ -231,6 +242,7 @@
     periods: periods,
     handlePattern: handlePattern,
     standing: standing,
+    playerProfile: playerProfile,
     submit: submit,
     captureReferral: captureReferral,
     referrer: referrer,

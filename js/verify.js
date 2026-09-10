@@ -86,7 +86,14 @@
       var mover = state.awaitingCapture || state.turn;
       if (mover === s.humanSide) Gr.record(card, action, Gr.assess(state, action));
 
-      E.apply(state, action);
+      // Exchanges, watched the same way the app watches them, to feed the same
+      // two counters the play-style profile is built from.
+      var events = E.apply(state, action);
+      for (var k = 0; k < events.length; k++) {
+        if (events[k].type !== 'capture') continue;
+        if (events[k].player === s.humanSide) card.captures++;
+        if (events[k].victim === s.humanSide) card.lost++;
+      }
     }
 
     if (!state.matchOver) return fail('the match never finished');
@@ -105,6 +112,12 @@
       result: result,
       accuracy: accuracy,
       decisions: summary.decisions,
+      // The raw material of the play-style profile — worked out here the same
+      // way it always has been, just no longer thrown away after grading.
+      best: card.best,
+      blunders: summary.blunders,
+      captures: summary.captures,
+      lostSoldiers: summary.lost,
       points: Math.round(pointsFor(result, accuracy) * 1000) / 1000,
       rounds: state.round,
       scores: { A: state.scores.A, B: state.scores.B }

@@ -215,15 +215,23 @@
   var PROFILE_MIN_MATCHES = 5;   // below this, a profile says more about luck
   var PROFILE_MIN_DECISIONS = 20;
 
+  // Each archetype carries two readings of the same note: one spoken to the
+  // player themselves, one spoken about somebody else. A profile can now be
+  // read for either, and "You play at your own level" makes no sense said
+  // about a name on a leaderboard.
   var ARCHETYPES = [
     { key: 'precision',   name: 'The Architect',
-      note: 'You find the strongest move more often than anything else in your game.' },
+      note: 'You find the strongest move more often than anything else in your game.',
+      noteThird: 'They find the strongest move more often than anything else in their game.' },
     { key: 'composure',   name: 'The Patient General',
-      note: 'You rarely throw away the decisions that matter. Mistakes cost you least.' },
+      note: 'You rarely throw away the decisions that matter. Mistakes cost you least.',
+      noteThird: 'They rarely throw away the decisions that matter. Mistakes cost them least.' },
     { key: 'dominance',   name: 'The Field Commander',
-      note: 'You win the exchanges. More soldiers cross to your camp than leave it.' },
+      note: 'You win the exchanges. More soldiers cross to your camp than leave it.',
+      noteThird: 'They win the exchanges. More soldiers cross to their camp than leave it.' },
     { key: 'consistency', name: 'The Steady Hand',
-      note: 'You play at your own level match after match, with little between your best and your worst.' }
+      note: 'You play at your own level match after match, with little between your best and your worst.',
+      noteThird: 'They play at their own level match after match, with little between their best and their worst.' }
   ];
 
   function stdev(list) {
@@ -279,6 +287,7 @@
       traits: traits,
       archetype: top.name,
       note: top.note,
+      noteThird: top.noteThird,
       graded: rec.graded,
       exchanges: exchanges
     };

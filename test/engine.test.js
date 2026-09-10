@@ -574,6 +574,35 @@ console.log('\nServer-side verification of a submitted match');
   // A player cannot inflate their grade: the server recomputes it.
   check('the grade is recomputed, never accepted from the client',
     V.replay({ ...submission, accuracy: 100, points: 999 }).accuracy === v.accuracy);
+
+  // The raw material of the play-style profile — worked out server-side by
+  // watching the same replay, exactly as the client watches its own games.
+  check('the replay reports the profile counters',
+    Number.isInteger(v.best) && Number.isInteger(v.blunders) &&
+    Number.isInteger(v.captures) && Number.isInteger(v.lostSoldiers),
+    JSON.stringify({ best: v.best, blunders: v.blunders, captures: v.captures, lostSoldiers: v.lostSoldiers }));
+  check('best moves never exceed graded decisions', v.best <= v.decisions, v.best + ' of ' + v.decisions);
+  check('blunders never exceed graded decisions', v.blunders <= v.decisions, v.blunders + ' of ' + v.decisions);
+  check('a genuine match has some exchanges to read a profile from',
+    v.captures + v.lostSoldiers > 0, v.captures + '/' + v.lostSoldiers);
+  check('the profile counters are deterministic, same as everything else',
+    again.best === v.best && again.blunders === v.blunders &&
+    again.captures === v.captures && again.lostSoldiers === v.lostSoldiers);
+
+  // Feed a server-shaped record straight into the same profile() a device
+  // uses on its own localStorage — the whole point of computing these
+  // server-side is that nobody needs a second copy of what a trait means.
+  const manyMatches = Array.from({ length: 6 }, () => V.replay(submission));
+  const serverRec = manyMatches.reduce((rec, m) => {
+    rec.graded++; rec.decisions += m.decisions; rec.best += m.best;
+    rec.blunders += m.blunders; rec.captures += m.captures; rec.lost_soldiers += m.lostSoldiers;
+    rec.recent.push(m.accuracy);
+    return rec;
+  }, { graded: 0, decisions: 0, best: 0, blunders: 0, captures: 0, lost_soldiers: 0, recent: [] });
+  const serverProfile = Gr.profile(serverRec);
+  check('a server-built record produces a profile via the same profile() function',
+    serverProfile.ready === true || serverProfile.matchesNeeded >= 0,
+    JSON.stringify(serverProfile));
 }
 
 // --- halftime -------------------------------------------------------------

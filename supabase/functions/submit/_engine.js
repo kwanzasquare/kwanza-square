@@ -829,12 +829,36 @@ const window = {};
 
   var STORE = 'kwanza-record';
 
+  // How many past accuracies to keep. Enough to see whether somebody plays at a
+  // steady level, small enough that the record stays a couple of hundred bytes.
+  var RECENT_KEPT = 50;
+
+  function blankRecord() {
+    return {
+      played: 0, won: 0, lost: 0, drawn: 0,
+      bestAccuracy: null, sumAccuracy: 0, graded: 0,
+      streak: 0, bestStreak: 0,
+      // the raw material of the play-style profile, summed across every match
+      decisions: 0, best: 0, blunders: 0, captures: 0, lost_soldiers: 0,
+      recent: []
+    };
+  }
+
   function loadRecord() {
+    var saved = null;
     try {
       var raw = localStorage.getItem(STORE);
-      if (raw) return JSON.parse(raw);
+      if (raw) saved = JSON.parse(raw);
     } catch (e) {}
-    return { played: 0, won: 0, lost: 0, drawn: 0, bestAccuracy: null, sumAccuracy: 0, graded: 0, streak: 0, bestStreak: 0 };
+    if (!saved) return blankRecord();
+
+    // A record written before the profile existed is missing the new fields.
+    // Merging over a blank one keeps somebody's history rather than resetting
+    // it, and the profile simply reports too little data until they play again.
+    var rec = blankRecord();
+    for (var k in saved) if (Object.prototype.hasOwnProperty.call(saved, k)) rec[k] = saved[k];
+    if (!Array.isArray(rec.recent)) rec.recent = [];
+    return rec;
   }
 
   function saveRecord(rec) {
@@ -853,13 +877,120 @@ const window = {};
       rec.sumAccuracy += result.accuracy;
       rec.graded++;
       if (rec.bestAccuracy === null || result.accuracy > rec.bestAccuracy) rec.bestAccuracy = result.accuracy;
+      rec.recent.push(Math.round(result.accuracy * 10) / 10);
+      if (rec.recent.length > RECENT_KEPT) rec.recent = rec.recent.slice(-RECENT_KEPT);
     }
+
+    // Everything the profile is built from. Each of these was already measured
+    // to grade the match; nothing new is watched or recorded about the player.
+    rec.decisions     += num(result.decisions);
+    rec.best          += num(result.best);
+    rec.blunders      += num(result.blunders);
+    rec.captures      += num(result.captures);
+    rec.lost_soldiers += num(result.lostSoldiers);
+
     saveRecord(rec);
     return rec;
   }
 
+  function num(v) { return typeof v === 'number' && isFinite(v) ? v : 0; }
+
   function averageAccuracy(rec) {
     return rec.graded ? rec.sumAccuracy / rec.graded : null;
+  }
+
+  // ------------------------------------------------------- play-style profile
+  //
+  // Four readings of how somebody plays, each one a thing that was actually
+  // measured rather than a label invented to sound good:
+  //
+  //   Precision   how often they chose the strongest move available
+  //   Composure   how rarely they erred when the decision genuinely mattered
+  //   Dominance   the share of soldier exchanges that went their way
+  //   Consistency how close their matches are to one another
+  //
+  // Every number comes from grading that already happens to score a match. The
+  // profile watches nothing new; it only remembers what was already worked out.
+
+  var PROFILE_MIN_MATCHES = 5;   // below this, a profile says more about luck
+  var PROFILE_MIN_DECISIONS = 20;
+
+  // Each archetype carries two readings of the same note: one spoken to the
+  // player themselves, one spoken about somebody else. A profile can now be
+  // read for either, and "You play at your own level" makes no sense said
+  // about a name on a leaderboard.
+  var ARCHETYPES = [
+    { key: 'precision',   name: 'The Architect',
+      note: 'You find the strongest move more often than anything else in your game.',
+      noteThird: 'They find the strongest move more often than anything else in their game.' },
+    { key: 'composure',   name: 'The Patient General',
+      note: 'You rarely throw away the decisions that matter. Mistakes cost you least.',
+      noteThird: 'They rarely throw away the decisions that matter. Mistakes cost them least.' },
+    { key: 'dominance',   name: 'The Field Commander',
+      note: 'You win the exchanges. More soldiers cross to your camp than leave it.',
+      noteThird: 'They win the exchanges. More soldiers cross to their camp than leave it.' },
+    { key: 'consistency', name: 'The Steady Hand',
+      note: 'You play at your own level match after match, with little between your best and your worst.',
+      noteThird: 'They play at their own level match after match, with little between their best and their worst.' }
+  ];
+
+  function stdev(list) {
+    if (list.length < 2) return null;
+    var mean = 0, i;
+    for (i = 0; i < list.length; i++) mean += list[i];
+    mean /= list.length;
+    var sum = 0;
+    for (i = 0; i < list.length; i++) sum += (list[i] - mean) * (list[i] - mean);
+    return Math.sqrt(sum / list.length);
+  }
+
+  function clamp(n) { return Math.max(0, Math.min(100, n)); }
+
+  /**
+   * Build the profile, or say why it cannot be built yet.
+   *
+   * Returning null rather than a shaky profile is deliberate: a reading drawn
+   * from two matches is mostly noise, and telling somebody they are one kind of
+   * player when the evidence cannot support it is worse than telling them to
+   * play a few more.
+   */
+  function profile(rec) {
+    rec = rec || loadRecord();
+    if (rec.graded < PROFILE_MIN_MATCHES || rec.decisions < PROFILE_MIN_DECISIONS) {
+      return {
+        ready: false,
+        matchesNeeded: Math.max(0, PROFILE_MIN_MATCHES - rec.graded),
+        graded: rec.graded
+      };
+    }
+
+    var exchanges = rec.captures + rec.lost_soldiers;
+    var sd = stdev(rec.recent);
+
+    var traits = {
+      precision:   clamp((rec.best / rec.decisions) * 100),
+      composure:   clamp((1 - (rec.blunders / rec.decisions)) * 100),
+      // With no exchanges at all there is nothing to read, so this sits at the
+      // midpoint rather than pretending to a score in either direction.
+      dominance:   exchanges ? clamp((rec.captures / exchanges) * 100) : 50,
+      // A spread of 25 accuracy points or more reads as no consistency at all.
+      consistency: sd === null ? 50 : clamp(100 - (sd * 4))
+    };
+
+    var top = ARCHETYPES[0], i;
+    for (i = 1; i < ARCHETYPES.length; i++) {
+      if (traits[ARCHETYPES[i].key] > traits[top.key]) top = ARCHETYPES[i];
+    }
+
+    return {
+      ready: true,
+      traits: traits,
+      archetype: top.name,
+      note: top.note,
+      noteThird: top.noteThird,
+      graded: rec.graded,
+      exchanges: exchanges
+    };
   }
 
   KZ.Grade = {
@@ -873,7 +1004,12 @@ const window = {};
     loadRecord: loadRecord,
     saveRecord: saveRecord,
     commitMatch: commitMatch,
-    averageAccuracy: averageAccuracy
+    averageAccuracy: averageAccuracy,
+    profile: profile,
+    blankRecord: blankRecord,
+    PROFILE_MIN_MATCHES: PROFILE_MIN_MATCHES,
+    PROFILE_MIN_DECISIONS: PROFILE_MIN_DECISIONS,
+    ARCHETYPES: ARCHETYPES
   };
 })(typeof module !== 'undefined' && module.exports ? (module.exports.KZ = module.exports.KZ || {}) : (window.KZ = window.KZ || {}));
 
@@ -967,7 +1103,14 @@ const window = {};
       var mover = state.awaitingCapture || state.turn;
       if (mover === s.humanSide) Gr.record(card, action, Gr.assess(state, action));
 
-      E.apply(state, action);
+      // Exchanges, watched the same way the app watches them, to feed the same
+      // two counters the play-style profile is built from.
+      var events = E.apply(state, action);
+      for (var k = 0; k < events.length; k++) {
+        if (events[k].type !== 'capture') continue;
+        if (events[k].player === s.humanSide) card.captures++;
+        if (events[k].victim === s.humanSide) card.lost++;
+      }
     }
 
     if (!state.matchOver) return fail('the match never finished');
@@ -986,6 +1129,12 @@ const window = {};
       result: result,
       accuracy: accuracy,
       decisions: summary.decisions,
+      // The raw material of the play-style profile — worked out here the same
+      // way it always has been, just no longer thrown away after grading.
+      best: card.best,
+      blunders: summary.blunders,
+      captures: summary.captures,
+      lostSoldiers: summary.lost,
       points: Math.round(pointsFor(result, accuracy) * 1000) / 1000,
       rounds: state.round,
       scores: { A: state.scores.A, B: state.scores.B }
