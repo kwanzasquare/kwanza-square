@@ -1088,6 +1088,29 @@ h1, h2, h3 { font-family: var(--ui-font); font-weight: 800; margin: 0; letter-sp
 .kit-row.ok .kit-num { color: var(--gold-lift); }
 
 
+/* --------------------------------------------------------------- My Circle */
+
+.circle-head {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 4.2rem 2.6rem;
+  gap: 8px;
+  padding: 4px 4px 6px;
+  font-family: var(--ui-font); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: rgba(247,243,233,.4);
+  border-bottom: 1px solid rgba(247,243,233,.09);
+}
+.circle-head span:nth-child(n+3) { text-align: right; }
+.modal .modal-body .circle-rows { margin: 0 0 4px; padding: 0; }
+.modal .modal-body .circle-rows li { margin: 0; }
+.circle-row.me { margin: 2px 0; }
+.circle-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.circle-status {
+  font-size: 11.5px; color: rgba(247,243,233,.5);
+  overflow-wrap: anywhere;
+}
+.circle-status.counted { color: var(--gold-lift); }
+
 /* ------------------------------------------------------- play-style profile */
 
 .profile-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(247,243,233,.09); }

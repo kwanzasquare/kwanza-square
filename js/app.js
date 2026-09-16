@@ -860,12 +860,14 @@
   }
 
   /** Tap a name on a board to see how that player plays — read from the server, never localStorage. */
-  function showOpponentProfile(handle) {
+  function showOpponentProfile(handle, back) {
     if (!handle) return;
+    var actions = [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }];
+    if (back) actions.unshift({ label: 'Back', onClick: back });
     openModal(
       '<h2>' + escapeHtml(handle) + '</h2><div class="modal-body" id="opponent-profile-body">' +
         '<p class="hint">Loading their play style…</p></div>',
-      [{ label: 'Close', cls: 'btn-gold', onClick: closeModal }]
+      actions
     );
     C.playerProfile(handle).then(function (row) {
       var body = $('#opponent-profile-body');
@@ -886,12 +888,139 @@
     });
   }
 
-  /** Read the handle out of a clicked leaderboard row, whichever board it came from. */
+  // ------------------------------------------------------------- My Circle
+  //
+  // Martin's idea: tap your own name and a second board opens with you and
+  // everybody you invited, ranked on the same rule as the skill board. Beating
+  // the people you brought in is a reason to bring in more of them.
+  //
+  // The name is provisional — "My Circle" until Martin settles it — so it lives
+  // in one place.
+
+  var CIRCLE_NAME = 'My Circle';
+  var CIRCLE_DAYS = 3;   // the KwanzaStars rule: three matches on three different days
+
+  function isMine(handle) {
+    var mine = C.handle();
+    return !!(mine && handle && mine.toLowerCase() === String(handle).toLowerCase());
+  }
+
+  /** One line of the circle. Recruits also say whether they count as a star yet. */
+  function circleRow(r) {
+    var played = Number(r.matches) || 0;
+    var status;
+    if (r.is_me) status = 'You';
+    else if (r.counted) status = '★ Counts as your star';
+    else if (!Number(r.days_played)) status = 'Invited — not played yet';
+    // Three days played but no point means the rules held it back — most often
+    // because they play on your own device, which never counts.
+    else if (Number(r.days_played) >= CIRCLE_DAYS) status = 'Not counted as a star';
+    else status = 'Joining — ' + r.days_played + ' of ' + CIRCLE_DAYS + ' days';
+
+    var ranked = r.rank !== null && r.rank !== undefined;
+    return '<li class="lb-row circle-row' + (r.is_me ? ' me' : '') + '" data-handle="' +
+        escapeHtml(r.handle) + '">' +
+      '<span class="lb-rank">' + (ranked ? r.rank : '—') + '</span>' +
+      '<span class="circle-who">' +
+        '<span class="lb-handle">' + escapeHtml(r.handle) + '</span>' +
+        '<span class="circle-status' + (r.counted && !r.is_me ? ' counted' : '') + '">' + status + '</span>' +
+      '</span>' +
+      '<span class="lb-rating">' + (ranked ? Number(r.rating).toFixed(2) : '—') + '</span>' +
+      '<span class="lb-played">' + played + '</span>' +
+    '</li>';
+  }
+
+  function circleHtml(rows, level) {
+    var others = rows.filter(function (r) { return !r.is_me; });
+    var unranked = rows.filter(function (r) { return r.rank === null || r.rank === undefined; });
+    var intro = '<p class="hint">You and everyone you invited, ranked on the ' +
+      levelName(level) + ' board.' + (others.length ? ' Tap a name to see how they play.' : '') + '</p>';
+
+    var list = '<div class="lb-head circle-head"><span>#</span><span>Player</span>' +
+      '<span>Rating</span><span>Games</span></div>' +
+      '<ol class="lb-rows circle-rows">' + rows.map(circleRow).join('') + '</ol>';
+
+    var foot = '';
+    if (!others.length) {
+      foot = '<p class="hint">Nobody has joined through your link yet. The moment ' +
+        'somebody does, they appear here, and you can see which of you plays better.</p>';
+    } else if (unranked.length) {
+      foot = '<p class="hint">A rating appears after three matches on this level, ' +
+        'the same rule as the main board.</p>';
+    }
+    return intro + list + foot;
+  }
+
+  function showMyCircle(level) {
+    var mine = C.handle();
+    if (!mine) return;
+    level = level || homeLevel();
+    var again = function () { showMyCircle(level); };
+
+    openModal(
+      '<h2>' + CIRCLE_NAME + '</h2><div class="modal-body" id="circle-body">' +
+        '<p class="hint">Loading your circle…</p></div>',
+      [
+        { label: 'My invite link', onClick: function () { closeModal(); openStars(); } },
+        { label: 'Close', cls: 'btn-gold', onClick: closeModal }
+      ]
+    );
+
+    C.myCircle(mine, level).then(function (rows) {
+      var body = $('#circle-body');
+      if (!body) return;
+
+      // No row at all means the server did not recognise this device as the
+      // one that claimed the name — say so rather than showing an empty board.
+      if (!rows.some(function (r) { return r.is_me; })) {
+        body.innerHTML = '<p class="hint">' + CIRCLE_NAME + ' opens on the device you ' +
+          'first played under this name, and once you have a ranked match on record.</p>';
+        return;
+      }
+      body.innerHTML = circleHtml(rows, level);
+      body.onclick = function (ev) {
+        var row = ev.target.closest('.circle-row');
+        if (!row) return;
+        var who = row.getAttribute('data-handle');
+        if (isMine(who)) {
+          openModal('<h2>' + escapeHtml(who) + '</h2><div class="modal-body">' +
+            (profileHtml() || '<p class="hint">Play a few ranked matches and your play style appears here.</p>') +
+            '</div>', [
+              { label: 'Back', onClick: again },
+              { label: 'Close', cls: 'btn-gold', onClick: closeModal }
+            ]);
+        } else {
+          showOpponentProfile(who, again);
+        }
+      };
+    }, function (err) {
+      var body = $('#circle-body');
+      if (!body) return;
+      console.warn('my circle unavailable:', err);
+      body.innerHTML = '<p class="hint">' + (
+        err.status === 404 || /schema cache|does not exist/i.test(err.message || '')
+          ? CIRCLE_NAME + ' is not open yet. It arrives shortly.'
+          : 'Could not load your circle just now. Please try again in a moment.'
+      ) + '</p>';
+    });
+  }
+
+  /**
+   * Read the handle out of a clicked leaderboard row, whichever board it came
+   * from. Your own name opens My Circle; anybody else's opens their play style.
+   */
   function handleFromRow(ev) {
     var row = ev.target.closest('.lb-row, .lb-you');
     if (!row) return;
     var span = row.querySelector('.lb-handle');
-    if (span) showOpponentProfile(span.textContent);
+    if (!span) return;
+    var name = span.textContent;
+    if (isMine(name)) {
+      var fromStars = !!ev.currentTarget.closest('#screen-stars');
+      showMyCircle(fromStars ? homeLevel() : lb.level);
+    } else {
+      showOpponentProfile(name);
+    }
   }
 
   function renderScoreboard(mood) {
@@ -1877,7 +2006,8 @@
       if (ev.target === ev.currentTarget) closeModal();
     });
 
-    // Any name on a leaderboard opens that player's play-style profile.
+    // Any name on a leaderboard opens that player's play-style profile;
+    // your own name opens My Circle.
     [$('#lb-rows'), $('#lb-you'), $('#stars-rows'), $('#stars-you')].forEach(function (el) {
       if (el) el.addEventListener('click', handleFromRow);
     });

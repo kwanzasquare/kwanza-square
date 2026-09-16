@@ -212,6 +212,18 @@
   }
 
   /**
+   * My Circle — the player plus everybody they invited, ranked on one level.
+   *
+   * Sends this device's id along with the name: who invited whom is shown
+   * nowhere else in the game, so only the device that claimed the name gets an
+   * answer. Anyone else gets an empty list.
+   */
+  function myCircle(name, level) {
+    return rpc('my_circle', { p_handle: name, p_device_id: deviceId(), p_level: level || 'normal' })
+      .then(function (rows) { return rows || []; });
+  }
+
+  /**
    * Send a finished match. `state` is the engine's own state — the full action
    * log travels with it, and the server decides what actually happened.
    */
@@ -243,6 +255,7 @@
     handlePattern: handlePattern,
     standing: standing,
     playerProfile: playerProfile,
+    myCircle: myCircle,
     submit: submit,
     captureReferral: captureReferral,
     referrer: referrer,

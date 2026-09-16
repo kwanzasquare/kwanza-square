@@ -228,6 +228,22 @@ The social leaderboard ranks players by qualified recruits. Players with no
 qualified recruits yet can still see how many recruits they need to reach their
 next star.
 
+### My Circle
+
+Tapping your own name on either leaderboard opens My Circle. It shows you and
+everyone who joined through your link, ranked by the same rating rule as the
+skill board, on the level you are viewing.
+
+Each person you invited also shows whether they count as a KwanzaStars recruit
+yet, or how many of the three days they have played.
+
+Only the device that claimed the name can open it, because who invited whom is
+not shown anywhere else in the game.
+
+Tapping anyone else's name opens their play-style profile.
+
+The name "My Circle" is provisional until Martin confirms it.
+
 ### Invitational status
 
 The backend exposes the Invitational requirements separately so the game can
@@ -250,6 +266,13 @@ The production `submit` Edge Function is located at:
 
 The KwanzaStars migration and the updated `submit` function are currently
 deployed on the production Supabase project.
+
+My Circle needs one more migration, which is not applied yet:
+
+`supabase/migrations/20260916120000_my_circle.sql`
+
+It adds one read-only function and needs no change to `submit`. Until it is
+applied, My Circle says it is not open yet.
 
 ---
 
