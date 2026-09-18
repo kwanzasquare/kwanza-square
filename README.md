@@ -228,9 +228,9 @@ The social leaderboard ranks players by qualified recruits. Players with no
 qualified recruits yet can still see how many recruits they need to reach their
 next star.
 
-### My Circle
+### My Team
 
-Tapping your own name on either leaderboard opens My Circle. It shows you and
+Tapping your own name on either leaderboard opens My Team. It shows you and
 everyone who joined through your link, ranked by the same rating rule as the
 skill board, on the level you are viewing.
 
@@ -242,7 +242,10 @@ not shown anywhere else in the game.
 
 Tapping anyone else's name opens their play-style profile.
 
-The name "My Circle" is provisional until Martin confirms it.
+Martin chose the name "My Team", so that this board and the team ranking he
+wants later share one word. The database function is still called `my_circle()`,
+the working name it was applied to production under; renaming it would cost a
+migration and change nothing a player sees.
 
 ### Invitational status
 
@@ -267,12 +270,12 @@ The production `submit` Edge Function is located at:
 The KwanzaStars migration and the updated `submit` function are currently
 deployed on the production Supabase project.
 
-My Circle needs one more migration, which is not applied yet:
+My Team needs one further migration:
 
 `supabase/migrations/20260916120000_my_circle.sql`
 
-It adds one read-only function and needs no change to `submit`. Until it is
-applied, My Circle says it is not open yet.
+It adds one read-only function and needs no change to `submit`. It is applied on
+the production Supabase project.
 
 ---
 

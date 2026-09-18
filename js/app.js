@@ -888,16 +888,20 @@
     });
   }
 
-  // ------------------------------------------------------------- My Circle
+  // --------------------------------------------------------------- My Team
   //
   // Martin's idea: tap your own name and a second board opens with you and
   // everybody you invited, ranked on the same rule as the skill board. Beating
   // the people you brought in is a reason to bring in more of them.
   //
-  // The name is provisional — "My Circle" until Martin settles it — so it lives
-  // in one place.
+  // The database function behind it is still called my_circle(), which was the
+  // working name. It is already applied in production, so renaming it would
+  // cost a migration and buy nothing; only what a player reads has changed.
+  //
+  // Martin chose the name: "My Team", so that the personal board and the team
+  // ranking he wants later share one word. It lives in one place either way.
 
-  var CIRCLE_NAME = 'My Circle';
+  var CIRCLE_NAME = 'My Team';
   var CIRCLE_DAYS = 3;   // the KwanzaStars rule: three matches on three different days
 
   function isMine(handle) {
@@ -996,7 +1000,7 @@
     }, function (err) {
       var body = $('#circle-body');
       if (!body) return;
-      console.warn('my circle unavailable:', err);
+      console.warn('my team unavailable:', err);
       body.innerHTML = '<p class="hint">' + (
         err.status === 404 || /schema cache|does not exist/i.test(err.message || '')
           ? CIRCLE_NAME + ' is not open yet. It arrives shortly.'
@@ -1007,7 +1011,7 @@
 
   /**
    * Read the handle out of a clicked leaderboard row, whichever board it came
-   * from. Your own name opens My Circle; anybody else's opens their play style.
+   * from. Your own name opens My Team; anybody else's opens their play style.
    */
   function handleFromRow(ev) {
     var row = ev.target.closest('.lb-row, .lb-you');
@@ -2007,7 +2011,7 @@
     });
 
     // Any name on a leaderboard opens that player's play-style profile;
-    // your own name opens My Circle.
+    // your own name opens My Team.
     [$('#lb-rows'), $('#lb-you'), $('#stars-rows'), $('#stars-you')].forEach(function (el) {
       if (el) el.addEventListener('click', handleFromRow);
     });
